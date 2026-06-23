@@ -102,7 +102,7 @@ class DashboardService
             ->get();
 
         return [
-            'labels' => $rows->map(fn ($row) => InvoiceStatus::from($row->status)->label())->all(),
+            'labels' => $rows->map(fn ($row) => ($row->status instanceof InvoiceStatus ? $row->status : InvoiceStatus::from($row->status))->label())->all(),
             'values' => $rows->map(fn ($row) => (float) $row->total)->all(),
             'counts' => $rows->map(fn ($row) => (int) $row->count)->all(),
         ];

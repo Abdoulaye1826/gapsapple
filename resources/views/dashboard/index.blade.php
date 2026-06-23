@@ -24,11 +24,12 @@
     $kpis = [
       ['label' => 'CA du jour', 'value' => number_format($stats['revenue_today'], 0, ',', ' ') . ' FCFA', 'icon' => 'bi-currency-exchange', 'color' => 'bg-primary bg-opacity-10 text-primary'],
       ['label' => 'CA du mois', 'value' => number_format($stats['revenue_month'], 0, ',', ' ') . ' FCFA', 'icon' => 'bi-graph-up-arrow', 'color' => 'bg-success bg-opacity-10 text-success'],
-      ['label' => 'Ventes', 'value' => $stats['sales_count'], 'icon' => 'bi-cart-check', 'color' => 'bg-info bg-opacity-10 text-info'],
-      ['label' => 'Produits', 'value' => $stats['products_count'], 'icon' => 'bi-controller', 'color' => 'bg-secondary bg-opacity-10 text-secondary'],
-      ['label' => 'Ruptures', 'value' => $stats['out_of_stock_count'], 'icon' => 'bi-exclamation-octagon', 'color' => 'bg-danger bg-opacity-10 text-danger'],
-      ['label' => 'Stock faible', 'value' => $stats['low_stock_count'], 'icon' => 'bi-exclamation-triangle', 'color' => 'bg-warning bg-opacity-10 text-warning'],
+      ['label' => 'Ventes validées', 'value' => $stats['sales_count'], 'icon' => 'bi-cart-check', 'color' => 'bg-info bg-opacity-10 text-info'],
+      ['label' => 'Factures émises', 'value' => $stats['invoices_count'], 'icon' => 'bi-file-earmark-text', 'color' => 'bg-secondary bg-opacity-10 text-secondary'],
+      ['label' => 'Factures payées', 'value' => $stats['paid_invoices_count'], 'icon' => 'bi-wallet2', 'color' => 'bg-success bg-opacity-10 text-success'],
+      ['label' => 'Impayés', 'value' => $stats['pending_invoices_count'], 'icon' => 'bi-hourglass-split', 'color' => 'bg-warning bg-opacity-10 text-warning'],
       ['label' => 'Clients', 'value' => $stats['customers_count'], 'icon' => 'bi-people', 'color' => 'bg-primary bg-opacity-10 text-primary'],
+      ['label' => 'Nouveaux clients (mois)', 'value' => $stats['new_customers_month'], 'icon' => 'bi-person-plus', 'color' => 'bg-info bg-opacity-10 text-info'],
     ];
   @endphp
 
@@ -61,6 +62,127 @@
     <div class="chart-card">
       <div class="card-title"><i class="bi bi-pie-chart me-2"></i>Ventes par catégorie</div>
       <canvas id="salesByCategoryChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="chart-card h-100">
+      <div class="card-title"><i class="bi bi-pie-chart-fill me-2"></i>Statut des factures</div>
+      <canvas id="invoiceStatusChart" height="260"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="table-card h-100">
+      <div class="p-3 border-bottom">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2"></i>Factures récentes</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Numéro</th>
+              <th>Client</th>
+              <th class="text-end">Montant</th>
+              <th class="text-end">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($recentInvoices as $invoice)
+              @php
+                $invoiceStatus = $invoice->status instanceof App\Enums\InvoiceStatus
+                    ? $invoice->status
+                    : App\Enums\InvoiceStatus::from($invoice->status);
+              @endphp
+              <tr>
+                <td>{{ $invoice->invoice_number }}</td>
+                <td>{{ $invoice->customer?->full_name ?? '—' }}</td>
+                <td class="text-end">{{ number_format($invoice->total_ttc, 0, ',', ' ') }} FCFA</td>
+                <td class="text-end">
+                  <span class="badge {{ $invoiceStatus === App\Enums\InvoiceStatus::Paid ? 'bg-success' : ($invoiceStatus === App\Enums\InvoiceStatus::Issued ? 'bg-warning text-dark' : 'bg-danger') }}">
+                    {{ $invoiceStatus->label() }}
+                  </span>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">Aucune facture récente</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="table-card h-100">
+      <div class="p-3 border-bottom">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-trophy me-2"></i>Top clients</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Client</th>
+              <th class="text-center">Factures</th>
+              <th class="text-end">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($topCustomers as $index => $customer)
+              <tr>
+                <td>{{ $index + 1 }}</td>
+                <td>{{ $customer->full_name }}</td>
+                <td class="text-center"><span class="badge bg-primary">{{ $customer->invoices_count }}</span></td>
+                <td class="text-end">{{ number_format($customer->total_amount, 0, ',', ' ') }} FCFA</td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">Aucun client n’a encore passé de commande</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="table-card h-100">
+      <div class="p-3 border-bottom">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-people-fill me-2"></i>Vendeurs performants</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vendeur</th>
+              <th class="text-center">Ventes</th>
+              <th class="text-end">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($salesByUser as $index => $user)
+              <tr>
+                <td>{{ $index + 1 }}</td>
+                <td>{{ $user->name }}</td>
+                <td class="text-center"><span class="badge bg-info">{{ $user->sales_count }}</span></td>
+                <td class="text-end">{{ number_format($user->total_amount, 0, ',', ' ') }} FCFA</td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">Aucun vendeur enregistré</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -181,6 +303,27 @@
       datasets: [{
         data: catData.length ? catData : [1],
         backgroundColor: catLabels.length ? colors.slice(0, catLabels.length) : ['#e2e8f0'],
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+      }
+    }
+  });
+
+  const invoiceLabels = @json($invoiceStatusSummary['labels']);
+  const invoiceData = @json($invoiceStatusSummary['values']);
+  const invoiceColors = ['#0d6efd', '#198754', '#ffc107', '#dc3545'];
+
+  new Chart(document.getElementById('invoiceStatusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: invoiceLabels.length ? invoiceLabels : ['Aucune donnée'],
+      datasets: [{
+        data: invoiceData.length ? invoiceData : [1],
+        backgroundColor: invoiceLabels.length ? invoiceColors.slice(0, invoiceLabels.length) : ['#e2e8f0'],
       }]
     },
     options: {

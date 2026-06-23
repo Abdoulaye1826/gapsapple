@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Routes Web — Gaming Store SI
+| Routes Web — SEN SOLUTION ELECTRONIQUE SI
 |--------------------------------------------------------------------------
 */
 
@@ -35,7 +35,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('products', ProductController::class);
         Route::resource('suppliers', SupplierController::class)->except(['show']);
-        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::redirect('/reports', '/dashboard')->name('reports.index');
     });
 
     // ── Clients, Ventes, Factures (Admin, Gestionnaire, Caissier)
@@ -50,7 +50,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // ── Utilisateurs (Admin uniquement) ───────────────────────
     Route::middleware('role:admin')->group(function () {
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::resource('users', UserController::class)->except(['show']);
     });
 });
 

@@ -17,7 +17,11 @@ class DashboardController extends Controller
             'stats' => $this->dashboardService->getStats(),
             'salesByMonth' => $this->dashboardService->getSalesByMonth(),
             'salesByCategory' => $this->dashboardService->getSalesByCategory(),
+            'invoiceStatusSummary' => $this->dashboardService->getInvoiceStatusSummary(),
             'topProducts' => $this->dashboardService->getTopProducts(),
+            'topCustomers' => $this->dashboardService->getTopCustomers(),
+            'salesByUser' => $this->dashboardService->getSalesByUser(),
+            'recentInvoices' => $this->dashboardService->getRecentInvoices(),
             'stockAlerts' => $this->dashboardService->getStockAlerts(),
         ]);
     }

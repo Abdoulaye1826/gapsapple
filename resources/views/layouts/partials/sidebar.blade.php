@@ -2,7 +2,7 @@
   <div class="sidebar-brand">
     <div class="brand-icon"><i class="bi bi-controller"></i></div>
     <div>
-      <div class="brand-text">Gaming Store</div>
+      <div class="brand-text">SEN SOLUTION ELECTRONIQUE</div>
       <div class="brand-sub">SI Boutique</div>
     </div>
   </div>
@@ -19,6 +19,6 @@
   </nav>
 
   <div class="sidebar-footer">
-    &copy; {{ date('Y') }} Gaming Store SI
+    &copy; {{ date('Y') }} SEN SOLUTION ELECTRONIQUE SI
   </div>
 </aside>
