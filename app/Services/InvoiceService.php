@@ -33,6 +33,16 @@ class InvoiceService
             ->withQueryString();
     }
 
+    public function summary(): array
+    {
+        return [
+            'total' => Invoice::count(),
+            'issued' => Invoice::where('status', InvoiceStatus::Issued)->count(),
+            'paid' => Invoice::where('status', InvoiceStatus::Paid)->count(),
+            'cancelled' => Invoice::where('status', InvoiceStatus::Cancelled)->count(),
+        ];
+    }
+
     public function getCustomers()
     {
         return Customer::orderBy('full_name')->get();
@@ -57,6 +67,11 @@ class InvoiceService
 
     public function create(array $data): Invoice
     {
+        if (!empty($data['sale_id'])) {
+            $sale = Sale::find($data['sale_id']);
+            $data['customer_id'] = $sale?->customer_id;
+        }
+
         $data['invoice_number'] = $data['invoice_number'] ?? $this->generateInvoiceNumber();
         $data['status'] = $data['status'] ?? InvoiceStatus::Issued;
 
@@ -83,11 +98,18 @@ class InvoiceService
 
     private function generateInvoiceNumberFromSale(Sale $sale): string
     {
-        return preg_replace('/^V-/', 'F-', $sale->sale_number, 1);
+        $suffix = preg_replace('/^[A-Z]-/', '', $sale->sale_number);
+
+        return sprintf('F-%s', $suffix);
     }
 
     public function update(Invoice $invoice, array $data): Invoice
     {
+        if (!empty($data['sale_id'])) {
+            $sale = Sale::find($data['sale_id']);
+            $data['customer_id'] = $sale?->customer_id;
+        }
+
         $invoice->update($data);
 
         $this->activityLog->log('update', $invoice, "Facture modifiée : {$invoice->invoice_number}");

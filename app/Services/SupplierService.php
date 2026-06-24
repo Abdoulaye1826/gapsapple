@@ -26,6 +26,15 @@ class SupplierService
             ->withQueryString();
     }
 
+    public function summary(): array
+    {
+        return [
+            'total' => Supplier::count(),
+            'active' => Supplier::where('is_active', true)->count(),
+            'inactive' => Supplier::where('is_active', false)->count(),
+        ];
+    }
+
     /** @return \Illuminate\Database\Eloquent\Collection<int, Supplier> */
     public function activeList()
     {

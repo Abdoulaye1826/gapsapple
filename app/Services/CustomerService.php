@@ -21,6 +21,18 @@ class CustomerService
             ->withQueryString();
     }
 
+    public function summary(): array
+    {
+        $total = Customer::count();
+        $withInvoices = Customer::has('invoices')->count();
+
+        return [
+            'total' => $total,
+            'with_invoices' => $withInvoices,
+            'without_invoices' => $total - $withInvoices,
+        ];
+    }
+
     public function create(array $data): Customer
     {
         $customer = Customer::create($data);

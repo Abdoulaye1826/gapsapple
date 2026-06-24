@@ -19,8 +19,45 @@
   </a>
 </div>
 
-{{-- Filtres --}}
-<div class="card border-0 shadow-sm mb-4">
+<div class="dashboard-summary-grid mb-4">
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-primary">Total</span>
+      <i class="bi bi-tags summary-icon text-primary"></i>
+    </div>
+    <div class="summary-card-value">{{ $categories->total() }}</div>
+    <div class="summary-card-label">Catégories totales</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-success">Actives</span>
+      <i class="bi bi-check-circle summary-icon text-success"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['active'] }}</div>
+    <div class="summary-card-label">Catégories actives</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-secondary">Inactives</span>
+      <i class="bi bi-x-circle summary-icon text-muted"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['inactive'] }}</div>
+    <div class="summary-card-label">Catégories inactives</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-info">Affichage</span>
+      <i class="bi bi-eye summary-icon text-info"></i>
+    </div>
+    <div class="summary-card-value">{{ $categories->count() }}</div>
+    <div class="summary-card-label">Catégories sur cette page</div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4 filter-card">
   <div class="card-body">
     <form method="GET" action="{{ route('categories.index') }}" class="row g-3 align-items-end">
       <div class="col-md-5">
@@ -36,9 +73,9 @@
           <option value="0" @selected(request('is_active') === '0')>Inactives</option>
         </select>
       </div>
-      <div class="col-md-4">
-        <button type="submit" class="btn btn-outline-primary me-2"><i class="bi bi-search me-1"></i>Filtrer</button>
-        <a href="{{ route('categories.index') }}" class="btn btn-outline-secondary">Réinitialiser</a>
+      <div class="col-md-4 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{{ route('categories.index') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
       </div>
     </form>
   </div>

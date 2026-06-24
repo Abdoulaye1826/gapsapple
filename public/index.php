@@ -5,6 +5,8 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+header('Content-Type: text/html; charset=UTF-8');
+
 /*
 |--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance

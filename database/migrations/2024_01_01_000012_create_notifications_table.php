@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Migration : notifications système (stock faible, rupture, commandes, livraisons).
+ * Migration : notifications Système (stock faible, rupture, commandes, livraisons).
  */
 return new class extends Migration
 {

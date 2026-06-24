@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Notification système (stock, commandes, livraisons).
+ * Notification Système (stock, commandes, livraisons).
  * Nommé AppNotification pour éviter le conflit avec Illuminate\Notifications\DatabaseNotification.
  */
 class AppNotification extends Model

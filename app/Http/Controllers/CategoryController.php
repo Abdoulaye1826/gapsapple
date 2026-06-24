@@ -20,9 +20,11 @@ class CategoryController extends Controller
 
     public function index(Request $request): View
     {
-        $categories = $this->categoryService->paginate($request->only(['search', 'is_active']));
+        $filters = $request->only(['search', 'is_active']);
+        $categories = $this->categoryService->paginate($filters);
+        $summary = $this->categoryService->summary();
 
-        return view('categories.index', compact('categories'));
+        return view('categories.index', compact('categories', 'summary'));
     }
 
     public function create(): View

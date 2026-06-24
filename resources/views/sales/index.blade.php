@@ -41,6 +41,14 @@
         </select>
       </div>
       <div class="col-md-3">
+        <label class="form-label small">Type</label>
+        <select name="sale_type" class="form-select">
+          <option value="">Tous</option>
+          <option value="vente" @selected(($filters['sale_type'] ?? '') === 'vente')>Vente</option>
+          <option value="echange" @selected(($filters['sale_type'] ?? '') === 'echange')>Échange</option>
+        </select>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small">Client</label>
         <input type="text" name="customer_id" class="form-control" placeholder="ID client"
                value="{{ $filters['customer_id'] ?? '' }}">
@@ -58,6 +66,7 @@
       <thead>
         <tr>
           <th>Numéro</th>
+          <th>Type</th>
           <th>Client</th>
           <th>Date</th>
           <th>Montant TTC</th>
@@ -69,6 +78,7 @@
         @forelse($sales as $sale)
           <tr>
             <td>{{ $sale->sale_number }}</td>
+            <td><span class="badge {{ $sale->sale_type->badgeClass() }}">{{ $sale->sale_type->label() }}</span></td>
             <td>{{ $sale->customer?->full_name ?? 'Client anonyme' }}</td>
             <td>{{ $sale->sale_date->format('d/m/Y') }}</td>
             <td>{{ number_format($sale->total_ttc, 2, ',', ' ') }} FCFA</td>

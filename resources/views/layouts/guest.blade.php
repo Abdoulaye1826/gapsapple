@@ -13,7 +13,9 @@
     <div class="auth-wrapper">
         <div class="auth-card">
             <div class="auth-logo">
-                <div class="logo-icon"><i class="bi bi-controller"></i></div>
+                <div class="logo-icon">
+                    <img src="{{ asset('images/logo.png') }}" alt="SEN SOLUTION ELECTRONIQUE">
+                </div>
                 <h4 class="fw-bold mb-0">SEN SOLUTION ELECTRONIQUE</h4>
                 <small class="text-muted">Système d'information</small>
             </div>

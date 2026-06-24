@@ -18,7 +18,7 @@ class UserSeeder extends Seeder
         $users = [
             [
                 'role' => RoleSlug::Admin,
-                'name' => 'Admin Système',
+                'name' => 'Système',
                 'email' => 'admin@gaming-store.local',
                 'phone' => '+221 77 000 00 01',
             ],

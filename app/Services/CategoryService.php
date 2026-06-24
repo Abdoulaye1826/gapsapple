@@ -33,6 +33,15 @@ class CategoryService
             ->withQueryString();
     }
 
+    public function summary(): array
+    {
+        return [
+            'total' => Category::count(),
+            'active' => Category::where('is_active', true)->count(),
+            'inactive' => Category::where('is_active', false)->count(),
+        ];
+    }
+
     public function create(array $data): Category
     {
         $data['slug'] = Str::slug($data['name']);

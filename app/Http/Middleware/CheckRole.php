@@ -21,10 +21,6 @@ class CheckRole
             abort(403, 'Authentification requise.');
         }
 
-        if ($user->isAdmin()) {
-            return $next($request);
-        }
-
         $slug = $user->role?->slug;
         $userSlug = $slug instanceof RoleSlug ? $slug->value : (string) $slug;
 

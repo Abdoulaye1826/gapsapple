@@ -22,8 +22,9 @@ class InvoiceController extends Controller
     {
         $filters = $request->only(['search', 'status', 'customer_id']);
         $invoices = $this->invoiceService->paginate($filters);
+        $summary = $this->invoiceService->summary();
 
-        return view('invoices.index', compact('invoices', 'filters'));
+        return view('invoices.index', compact('invoices', 'filters', 'summary'));
     }
 
     public function create(): View
@@ -80,13 +81,15 @@ class InvoiceController extends Controller
     public function download(Invoice $invoice): Response
     {
         $pdf = PDF::loadView('invoices.print', compact('invoice'))
-            ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait')
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->setOption('isHtml5ParserEnabled', true);
 
         $fileName = "{$invoice->invoice_number}.pdf";
         $content = $pdf->output();
 
         return response($content, 200, [
-            'Content-Type' => 'application/pdf',
+            'Content-Type' => 'application/pdf; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
         ]);
     }

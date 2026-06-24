@@ -28,7 +28,7 @@ class RoleFactory extends Factory
         return $this->state(fn () => [
             'name' => RoleSlug::Admin->label(),
             'slug' => RoleSlug::Admin->value,
-            'description' => 'Accès total au système',
+            'description' => 'Accès total au Système',
             'permissions' => ['*'],
         ]);
     }

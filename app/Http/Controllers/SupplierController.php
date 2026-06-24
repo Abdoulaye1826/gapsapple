@@ -20,8 +20,9 @@ class SupplierController extends Controller
     {
         $filters = $request->only(['search', 'is_active']);
         $suppliers = $this->supplierService->paginate($filters);
+        $summary = $this->supplierService->summary();
 
-        return view('suppliers.index', compact('suppliers', 'filters'));
+        return view('suppliers.index', compact('suppliers', 'filters', 'summary'));
     }
 
     public function create(): View

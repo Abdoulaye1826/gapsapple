@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * Utilisateur du système (authentification + rôle).
+ * Utilisateur du Système (authentification + rôle).
  */
 class User extends Authenticatable
 {

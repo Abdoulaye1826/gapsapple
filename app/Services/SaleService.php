@@ -3,10 +3,19 @@
 namespace App\Services;
 
 use App\Enums\SaleStatus;
+use App\Enums\SaleType;
+use App\Enums\StockMovementType;
+use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Product;
 use App\Models\Sale;
+use App\Models\SaleItem;
+use App\Models\StockMovement;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SaleService
 {
@@ -29,6 +38,9 @@ class SaleService
             ->when($filters['status'] ?? null, function ($query, $status) {
                 $query->where('status', $status);
             })
+            ->when($filters['sale_type'] ?? null, function ($query, $saleType) {
+                $query->where('sale_type', $saleType);
+            })
             ->when($filters['customer_id'] ?? null, function ($query, $customerId) {
                 $query->where('customer_id', $customerId);
             })
@@ -42,35 +54,118 @@ class SaleService
         return Customer::orderBy('full_name')->get();
     }
 
+    public function getProducts()
+    {
+        return Product::active()->orderBy('name')->get();
+    }
+
+    public function getCategories()
+    {
+        return Category::active()->orderBy('name')->get();
+    }
+
     public function create(array $data, int $userId): Sale
     {
-        $data['sale_number'] = $this->generateSaleNumber();
+        $saleType = isset($data['sale_type']) ? SaleType::from($data['sale_type']) : SaleType::Vente;
+        $data['sale_type'] = $saleType;
+        $data['sale_number'] = $this->generateSaleNumber($saleType);
         $data['user_id'] = $userId;
         $data['status'] = $data['status'] ?? SaleStatus::Draft;
+        $data['sale_date'] = now()->toDateString();
+        $data['sold_at'] = now();
+        $data['exchange_details'] = null;
+        $data['exchange_voucher_number'] = null;
 
-        $sale = Sale::create($data);
+        return DB::transaction(function () use ($data, $saleType) {
+            if ($saleType === SaleType::Echange) {
+                $exchangeProduct = $this->resolveExchangeProduct($data);
+                if ($exchangeProduct !== null) {
+                    $data['exchange_details'] = $this->buildExchangeDetails($data, $exchangeProduct);
+                }
+                $data['exchange_voucher_number'] = $this->generateExchangeVoucherNumber();
+            }
 
-        $this->activityLog->log('create', $sale, "Vente créée : {$sale->sale_number}");
+            $saleTotals = $this->calculateTotals($data);
+            $data['subtotal_ht'] = 0;
+            $data['tax_amount'] = 0;
+            $data['tax_rate'] = 0;
+            $data['total_ttc'] = $saleTotals['total'];
 
-        if ($sale->status === SaleStatus::Validated) {
-            $this->invoiceService->createFromSale($sale);
-        }
+            $sale = Sale::create($data);
+            foreach ($this->buildSaleItems($data) as $itemData) {
+                $sale->items()->create([
+                    'product_id' => $itemData['product_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'discount' => 0,
+                    'line_total' => $itemData['line_total'],
+                ]);
+            }
 
-        return $sale;
+            $this->activityLog->log('create', $sale, "{$saleType->label()} créée : {$sale->sale_number}");
+
+            if ($sale->status === SaleStatus::Validated) {
+                $this->applyStockChanges($sale);
+                $this->invoiceService->createFromSale($sale);
+            }
+
+            return $sale;
+        });
     }
 
     public function update(Sale $sale, array $data): Sale
     {
         $previousStatus = $sale->status;
-        $sale->update($data);
+        $saleType = isset($data['sale_type']) ? SaleType::from($data['sale_type']) : $sale->sale_type;
+        $data['sale_type'] = $saleType;
 
-        $this->activityLog->log('update', $sale, "Vente mise à jour : {$sale->sale_number}");
-
-        if ($sale->status === SaleStatus::Validated && $previousStatus !== SaleStatus::Validated && !$sale->invoice()->exists()) {
-            $this->invoiceService->createFromSale($sale);
+        if ($saleType === SaleType::Echange) {
+            $exchangeProduct = $this->resolveExchangeProduct($data);
+            if ($exchangeProduct !== null) {
+                $data['exchange_details'] = $this->buildExchangeDetails($data, $exchangeProduct);
+                $data['exchange_voucher_number'] = $sale->exchange_voucher_number ?? $this->generateExchangeVoucherNumber();
+            }
+        } else {
+            $data['exchange_details'] = null;
+            $data['exchange_voucher_number'] = null;
         }
 
-        return $sale->fresh();
+        return DB::transaction(function () use ($sale, $data, $previousStatus) {
+            if ($previousStatus === SaleStatus::Validated) {
+                $this->reverseStockChanges($sale);
+            }
+
+            $saleTotals = $this->calculateTotals($data);
+            $data['subtotal_ht'] = 0;
+            $data['tax_amount'] = 0;
+            $data['tax_rate'] = 0;
+            $data['total_ttc'] = $saleTotals['total'];
+
+            $sale->update($data);
+
+            $sale->items()->delete();
+            foreach ($this->buildSaleItems($data) as $itemData) {
+                $sale->items()->create([
+                    'product_id' => $itemData['product_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'discount' => 0,
+                    'line_total' => $itemData['line_total'],
+                ]);
+            }
+
+            $this->activityLog->log('update', $sale, "Vente mise à jour : {$sale->sale_number}");
+
+            if ($sale->status === SaleStatus::Validated) {
+                $this->applyStockChanges($sale);
+
+                if (!$sale->invoice()->exists()) {
+                    $this->invoiceService->createFromSale($sale);
+                }
+            }
+
+            return $sale->fresh();
+        });
     }
 
     public function delete(Sale $sale): void
@@ -85,11 +180,188 @@ class SaleService
         $this->activityLog->log('delete', null, "Vente supprimée : {$saleNumber}");
     }
 
-    private function generateSaleNumber(): string
+    private function reverseStockChanges(Sale $sale): void
     {
+        $movements = StockMovement::query()
+            ->where('reference', $sale->sale_number)
+            ->get();
+
+        foreach ($movements as $movement) {
+            $product = $movement->product;
+            if ($product === null) {
+                $movement->delete();
+                continue;
+            }
+
+            $quantityBefore = $product->stock_quantity;
+            $quantity = $movement->quantity;
+
+            if ($movement->type === StockMovementType::Sale) {
+                $quantityAfter = $quantityBefore + $quantity;
+            } elseif ($movement->type === StockMovementType::Return) {
+                $quantityAfter = max(0, $quantityBefore - $quantity);
+            } else {
+                $quantityAfter = $quantityBefore;
+            }
+
+            $product->update(['stock_quantity' => $quantityAfter]);
+            $movement->delete();
+        }
+    }
+
+    private function applyStockChanges(Sale $sale): void
+    {
+        $sale->loadMissing('items');
+
+        foreach ($sale->items as $item) {
+            $product = $item->product;
+            if ($product === null) {
+                continue;
+            }
+
+            $quantityBefore = $product->stock_quantity;
+            $quantity = $item->quantity;
+            $quantityAfter = max(0, $quantityBefore - $quantity);
+            $movementType = StockMovementType::Sale;
+            $reason = $sale->isVente() ? 'Vente validée' : 'Échange - produit vendu';
+
+            $product->update(['stock_quantity' => $quantityAfter]);
+            StockMovement::create([
+                'product_id' => $product->id,
+                'user_id' => $sale->user_id,
+                'type' => $movementType,
+                'quantity' => $quantity,
+                'quantity_before' => $quantityBefore,
+                'quantity_after' => $quantityAfter,
+                'reason' => $reason,
+                'reference' => $sale->sale_number,
+            ]);
+        }
+
+        if ($sale->isEchange() && isset($sale->exchange_details['product_id'], $sale->exchange_details['quantity'])) {
+            $returnProduct = Product::find($sale->exchange_details['product_id']);
+            if ($returnProduct !== null) {
+                $quantityBefore = $returnProduct->stock_quantity;
+                $quantity = (int) $sale->exchange_details['quantity'];
+                $quantityAfter = $quantityBefore + $quantity;
+
+                $returnProduct->update(['stock_quantity' => $quantityAfter]);
+                StockMovement::create([
+                    'product_id' => $returnProduct->id,
+                    'user_id' => $sale->user_id,
+                    'type' => StockMovementType::Return,
+                    'quantity' => $quantity,
+                    'quantity_before' => $quantityBefore,
+                    'quantity_after' => $quantityAfter,
+                    'reason' => 'Échange validé',
+                    'reference' => $sale->sale_number,
+                ]);
+            }
+        }
+    }
+
+    private function resolveExchangeProduct(array $data): ?Product
+    {
+        if (! isset($data['sale_type']) || $data['sale_type'] !== SaleType::Echange) {
+            return null;
+        }
+
+        if (! empty($data['exchange_product_id'])) {
+            return Product::find($data['exchange_product_id']);
+        }
+
+        if (empty($data['exchange_product_name'])) {
+            return null;
+        }
+
+        $reference = $data['exchange_product_reference'] ?? Str::upper('EX-' . Str::random(6));
+        while (Product::where('reference', $reference)->exists()) {
+            $reference = Str::upper('EX-' . Str::random(6));
+        }
+
+        return Product::create([
+            'category_id' => $data['exchange_category_id'],
+            'reference' => $reference,
+            'name' => $data['exchange_product_name'],
+            'description' => $data['exchange_product_description'] ?? null,
+            'brand' => $data['exchange_product_brand'] ?? null,
+            'purchase_price' => 0,
+            'sale_price' => $data['exchange_product_estimated_value'] ?? 0,
+            'stock_quantity' => 0,
+            'minimum_stock' => 5,
+            'is_active' => true,
+        ]);
+    }
+
+    private function buildExchangeDetails(array $data, Product $product): array
+    {
+        return [
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'reference' => $product->reference,
+            'brand' => $product->brand,
+            'description' => $product->description,
+            'condition' => $data['exchange_product_condition'] ?? null,
+            'estimated_value' => $data['exchange_product_estimated_value'] ?? null,
+            'category_id' => $product->category_id,
+            'quantity' => $data['exchange_quantity'] ?? 0,
+        ];
+    }
+
+    private function generateExchangeVoucherNumber(): string
+    {
+        $date = now()->format('Ymd');
+        $count = Sale::where('exchange_voucher_number', 'like', "BEX-{$date}-%")->count() + 1;
+
+        return sprintf('BEX-%s-%04d', $date, $count);
+    }
+
+    private function generateSaleNumber(SaleType $type): string
+    {
+        $prefix = $type === SaleType::Vente ? 'V' : 'E';
         $date = now()->format('Ymd');
         $count = Sale::whereDate('created_at', now()->toDateString())->count() + 1;
 
-        return sprintf('V-%s-%04d', $date, $count);
+        return sprintf('%s-%s-%04d', $prefix, $date, $count);
+    }
+
+    private function buildSaleItems(array $data): array
+    {
+        $productIds = Arr::wrap($data['product_id'] ?? []);
+        $quantities = Arr::wrap($data['quantity'] ?? []);
+        $unitPrices = Arr::wrap($data['unit_price'] ?? []);
+
+        $items = [];
+        foreach ($productIds as $index => $productId) {
+            if (empty($productId)) {
+                continue;
+            }
+
+            $quantity = isset($quantities[$index]) ? (int) $quantities[$index] : 1;
+            $unitPrice = isset($unitPrices[$index]) ? (float) $unitPrices[$index] : 0;
+            $lineTotal = round(max(0, $quantity) * max(0, $unitPrice), 2);
+
+            $items[] = [
+                'product_id' => $productId,
+                'quantity' => max(1, $quantity),
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function calculateTotals(array $data): array
+    {
+        $items = $this->buildSaleItems($data);
+        $total = array_sum(array_column($items, 'line_total'));
+        $discount = isset($data['discount_amount']) ? (float) $data['discount_amount'] : 0;
+
+        return [
+            'subtotal' => 0,
+            'tax' => 0,
+            'total' => max(0, $total - $discount),
+        ];
     }
 }

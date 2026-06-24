@@ -6,7 +6,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
@@ -35,7 +34,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('products', ProductController::class);
         Route::resource('suppliers', SupplierController::class)->except(['show']);
-        Route::redirect('/reports', '/dashboard')->name('reports.index');
     });
 
     // ── Clients, Ventes, Factures (Admin, Gestionnaire, Caissier)
@@ -48,8 +46,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsApp'])->name('invoices.whatsapp');
     });
 
-    // ── Utilisateurs (Admin uniquement) ───────────────────────
-    Route::middleware('role:admin')->group(function () {
+    // ── Utilisateurs (Admin et Gestionnaire) ─────────────────
+    Route::middleware('role:admin,manager')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
     });
 });

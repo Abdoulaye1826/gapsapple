@@ -19,20 +19,55 @@
   </a>
 </div>
 
-<div class="mb-3">
-  <span class="badge bg-primary fs-6">{{ $customers->total() }} client(s)</span>
+<div class="dashboard-summary-grid mb-4">
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-primary">Total</span>
+      <i class="bi bi-people summary-icon text-primary"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['total'] }}</div>
+    <div class="summary-card-label">Clients enregistrés</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-info">Factures</span>
+      <i class="bi bi-receipt summary-icon text-info"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['with_invoices'] }}</div>
+    <div class="summary-card-label">Clients avec factures</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-secondary">Sans facture</span>
+      <i class="bi bi-person-dash summary-icon text-muted"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['without_invoices'] }}</div>
+    <div class="summary-card-label">Clients sans facture</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-info">Affichage</span>
+      <i class="bi bi-eye summary-icon text-info"></i>
+    </div>
+    <div class="summary-card-value">{{ $customers->count() }}</div>
+    <div class="summary-card-label">Clients sur cette page</div>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4 filter-card">
   <div class="card-body">
     <form method="GET" action="{{ route('customers.index') }}" class="row g-3 align-items-end">
-      <div class="col-md-8">
+      <div class="col-md-7">
         <label class="form-label small">Rechercher</label>
         <input type="text" name="search" class="form-control" placeholder="Nom, email, téléphone..."
                value="{{ $filters['search'] ?? '' }}">
       </div>
-      <div class="col-md-4 text-end">
-        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+      <div class="col-md-5 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{{ route('customers.index') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
       </div>
     </form>
   </div>

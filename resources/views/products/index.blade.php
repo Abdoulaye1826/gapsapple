@@ -19,12 +19,45 @@
   </a>
 </div>
 
-<div class="mb-3">
-  <span class="badge bg-primary fs-6">{{ $products->total() }} produit(s) au total</span>
+<div class="dashboard-summary-grid mb-4">
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-primary">Totaux</span>
+      <i class="bi bi-box-seam summary-icon text-primary"></i>
+    </div>
+    <div class="summary-card-value">{{ $products->total() }}</div>
+    <div class="summary-card-label">Produits enregistrés</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-info">Affichage</span>
+      <i class="bi bi-eye summary-icon text-info"></i>
+    </div>
+    <div class="summary-card-value">{{ $products->count() }}</div>
+    <div class="summary-card-label">Produits sur cette page</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-success">Catégories</span>
+      <i class="bi bi-tags summary-icon text-success"></i>
+    </div>
+    <div class="summary-card-value">{{ count($categories) }}</div>
+    <div class="summary-card-label">Catégories actives</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-warning">Marques</span>
+      <i class="bi bi-award summary-icon text-warning"></i>
+    </div>
+    <div class="summary-card-value">{{ count($brands) }}</div>
+    <div class="summary-card-label">Marques disponibles</div>
+  </div>
 </div>
 
-{{-- Filtres --}}
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4 filter-card">
   <div class="card-body">
     <form method="GET" action="{{ route('products.index') }}" id="filterForm" class="row g-3 align-items-end">
       <div class="col-md-3">
@@ -67,10 +100,12 @@
           <option value="0" @selected(($filters['is_active'] ?? '') === '0')>Inactifs</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{{ route('products.index') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
       </div>
     </form>
+    <div id="productsLoading" class="text-muted small mt-3 d-none">Chargement des produits...</div>
   </div>
 </div>
 
@@ -112,6 +147,7 @@
     const params = new URLSearchParams(new FormData(form));
     const fetchUrl = url || '{{ route('products.index') }}?' + params.toString();
 
+    setLoading(true);
     fetch(fetchUrl, {
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
     })
@@ -128,7 +164,8 @@
       }
       bindPaginationLinks();
     })
-    .catch(err => console.error('Erreur chargement produits:', err));
+    .catch(err => console.error('Erreur chargement produits:', err))
+    .finally(() => setLoading(false));
   }
 
   function bindPaginationLinks() {
@@ -138,6 +175,13 @@
         fetchProducts(this.href);
       });
     });
+  }
+
+  function setLoading(show) {
+    const loading = document.getElementById('productsLoading');
+
+    if (!loading) return;
+    loading.classList.toggle('d-none', !show);
   }
 
   if (searchInput) {

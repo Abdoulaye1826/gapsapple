@@ -18,7 +18,7 @@ class SaleController extends Controller
 
     public function index(Request $request): View
     {
-        $filters = $request->only(['search', 'status', 'customer_id']);
+        $filters = $request->only(['search', 'status', 'sale_type', 'customer_id']);
         $sales = $this->saleService->paginate($filters);
 
         return view('sales.index', compact('sales', 'filters'));
@@ -28,6 +28,8 @@ class SaleController extends Controller
     {
         return view('sales.create', [
             'customers' => $this->saleService->getCustomers(),
+            'products' => $this->saleService->getProducts(),
+            'categories' => $this->saleService->getCategories(),
             'sale' => null,
         ]);
     }
@@ -45,6 +47,8 @@ class SaleController extends Controller
         return view('sales.edit', [
             'sale' => $sale,
             'customers' => $this->saleService->getCustomers(),
+            'products' => $this->saleService->getProducts(),
+            'categories' => $this->saleService->getCategories(),
         ]);
     }
 

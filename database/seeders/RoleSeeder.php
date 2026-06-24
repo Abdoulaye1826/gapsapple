@@ -7,7 +7,7 @@ use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 /**
- * Seed des 4 rôles système avec leurs permissions.
+ * Seed des 4 rôles Système avec leurs permissions.
  */
 class RoleSeeder extends Seeder
 {
@@ -17,8 +17,11 @@ class RoleSeeder extends Seeder
             [
                 'name' => RoleSlug::Admin->label(),
                 'slug' => RoleSlug::Admin->value,
-                'description' => 'Accès total au système d\'information',
-                'permissions' => ['*'],
+                'description' => 'Gestion produits, stock, ventes et rapports',
+                'permissions' => [
+                    'products.manage', 'categories.manage', 'stock.manage',
+                    'suppliers.manage', 'sales.manage', 'dashboard.view',
+                ],
             ],
             [
                 'name' => RoleSlug::Manager->label(),
@@ -26,7 +29,7 @@ class RoleSeeder extends Seeder
                 'description' => 'Gestion produits, stock, ventes et rapports',
                 'permissions' => [
                     'products.manage', 'categories.manage', 'stock.manage',
-                    'suppliers.manage', 'sales.manage', 'reports.view', 'dashboard.view',
+                    'suppliers.manage', 'sales.manage', 'dashboard.view',
                 ],
             ],
             [

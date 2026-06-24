@@ -30,7 +30,7 @@ Système d'information web destiné à une boutique spécialisée dans la vente 
 | Notifications | Stock faible, rupture, commandes, livraisons |
 | Dashboard | KPIs, graphiques, alertes |
 
-### 1.4 Acteurs du système
+### 1.4 Acteurs du Système
 
 | Acteur | Description |
 |--------|-------------|

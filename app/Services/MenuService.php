@@ -20,7 +20,7 @@ class MenuService
         $userSlug = $slug instanceof RoleSlug ? $slug->value : (string) $slug;
 
         return collect($this->items())
-            ->filter(fn (array $item) => $user->isAdmin() || in_array($userSlug, $item['roles'], true))
+            ->filter(fn (array $item) => in_array($userSlug, $item['roles'], true))
             ->values()
             ->all();
     }
@@ -71,16 +71,10 @@ class MenuService
                 'roles' => ['admin', 'manager', 'cashier'],
             ],
             [
-                'label' => 'Rapports',
-                'route' => 'reports.index',
-                'icon' => 'bi-bar-chart-line',
-                'roles' => ['admin', 'manager'],
-            ],
-            [
                 'label' => 'Utilisateurs',
                 'route' => 'users.index',
                 'icon' => 'bi-person-gear',
-                'roles' => ['admin'],
+                'roles' => ['admin', 'manager'],
             ],
         ];
     }

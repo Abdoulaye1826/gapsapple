@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SaleStatus;
+use App\Enums\SaleType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,8 @@ class Sale extends Model
         'customer_id',
         'user_id',
         'sale_date',
+        'sold_at',
+        'sale_type',
         'discount_amount',
         'tax_rate',
         'subtotal_ht',
@@ -28,15 +31,20 @@ class Sale extends Model
         'total_ttc',
         'status',
         'notes',
+        'exchange_voucher_number',
+        'exchange_details',
     ];
 
     protected $casts = [
         'sale_date' => 'date',
+        'sold_at' => 'datetime',
+        'sale_type' => SaleType::class,
         'discount_amount' => 'decimal:2',
         'tax_rate' => 'decimal:2',
         'subtotal_ht' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total_ttc' => 'decimal:2',
+        'exchange_details' => 'array',
         'status' => SaleStatus::class,
     ];
 
@@ -110,5 +118,15 @@ class Sale extends Model
     public function isCancelled(): bool
     {
         return $this->status === SaleStatus::Cancelled;
+    }
+
+    public function isVente(): bool
+    {
+        return $this->sale_type === SaleType::Vente;
+    }
+
+    public function isEchange(): bool
+    {
+        return $this->sale_type === SaleType::Echange;
     }
 }

@@ -1,6 +1,8 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <div class="brand-icon"><i class="bi bi-controller"></i></div>
+    <div class="brand-icon">
+      <img src="{{ asset('images/logo.png') }}" alt="SEN SOLUTION ELECTRONIQUE">
+    </div>
     <div>
       <div class="brand-text">SEN SOLUTION ELECTRONIQUE</div>
       <div class="brand-sub">SI Boutique</div>

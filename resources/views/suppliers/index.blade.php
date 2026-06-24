@@ -19,14 +19,48 @@
   </a>
 </div>
 
-<div class="mb-3">
-  <span class="badge bg-primary fs-6">{{ $suppliers->total() }} fournisseur(s)</span>
+<div class="dashboard-summary-grid mb-4">
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-primary">Total</span>
+      <i class="bi bi-truck summary-icon text-primary"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['total'] }}</div>
+    <div class="summary-card-label">Fournisseurs enregistrés</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-success">Actifs</span>
+      <i class="bi bi-check-circle summary-icon text-success"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['active'] }}</div>
+    <div class="summary-card-label">Fournisseurs actifs</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-secondary">Inactifs</span>
+      <i class="bi bi-x-circle summary-icon text-muted"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['inactive'] }}</div>
+    <div class="summary-card-label">Fournisseurs inactifs</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-info">Affichage</span>
+      <i class="bi bi-eye summary-icon text-info"></i>
+    </div>
+    <div class="summary-card-value">{{ $suppliers->count() }}</div>
+    <div class="summary-card-label">Fournisseurs sur cette page</div>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4 filter-card">
   <div class="card-body">
     <form method="GET" action="{{ route('suppliers.index') }}" class="row g-3 align-items-end">
-      <div class="col-md-6">
+      <div class="col-md-5">
         <label class="form-label small">Rechercher</label>
         <input type="text" name="search" class="form-control" placeholder="Nom, email, téléphone..."
                value="{{ $filters['search'] ?? '' }}">
@@ -39,8 +73,9 @@
           <option value="0" @selected(($filters['is_active'] ?? '') === '0')>Inactifs</option>
         </select>
       </div>
-      <div class="col-md-3 text-end">
-        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+      <div class="col-md-4 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{{ route('suppliers.index') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
       </div>
     </form>
   </div>

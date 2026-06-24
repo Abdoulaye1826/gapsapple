@@ -19,11 +19,45 @@
   </a>
 </div>
 
-<div class="mb-3">
-  <span class="badge bg-primary fs-6">{{ $invoices->total() }} facture(s)</span>
+<div class="dashboard-summary-grid mb-4">
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-primary">Total</span>
+      <i class="bi bi-receipt summary-icon text-primary"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['total'] }}</div>
+    <div class="summary-card-label">Factures enregistrées</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-secondary">Émises</span>
+      <i class="bi bi-send summary-icon text-secondary"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['issued'] }}</div>
+    <div class="summary-card-label">Factures émises</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-success">Payées</span>
+      <i class="bi bi-cash-stack summary-icon text-success"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['paid'] }}</div>
+    <div class="summary-card-label">Factures payées</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
+      <span class="badge bg-danger">Annulées</span>
+      <i class="bi bi-x-circle summary-icon text-danger"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['cancelled'] }}</div>
+    <div class="summary-card-label">Factures annulées</div>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4 filter-card">
   <div class="card-body">
     <form method="GET" action="{{ route('invoices.index') }}" class="row g-3 align-items-end">
       <div class="col-md-4">
@@ -45,8 +79,9 @@
         <input type="text" name="customer_id" class="form-control" placeholder="ID client"
                value="{{ $filters['customer_id'] ?? '' }}">
       </div>
-      <div class="col-md-2 text-end">
-        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{{ route('invoices.index') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
       </div>
     </form>
   </div>
@@ -79,9 +114,9 @@
               <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimer">
                 <i class="bi bi-printer"></i>
               </a>
-              <a href="{{ route('invoices.download', $invoice) }}" class="btn btn-sm btn-outline-dark" title="PDF">
+              {{-- <a href="{{ route('invoices.download', $invoice) }}" class="btn btn-sm btn-outline-dark" title="PDF">
                 <i class="bi bi-file-earmark-pdf"></i>
-              </a>
+              </a> --}}
               <a href="{{ route('invoices.whatsapp', $invoice) }}" target="_blank" class="btn btn-sm btn-outline-success" title="WhatsApp">
                 <i class="bi bi-whatsapp"></i>
               </a>
