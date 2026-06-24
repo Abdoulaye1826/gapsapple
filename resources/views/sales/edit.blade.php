@@ -18,7 +18,8 @@
         <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">Annuler</a>
       </div>
     </form>
-    @include('sales._new_customer_modal')
+        @include('sales._new_customer_modal')
+    @include('sales._new_exchange_product_modal')
   </div>
 </div>
 @endsection

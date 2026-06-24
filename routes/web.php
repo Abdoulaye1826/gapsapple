@@ -39,6 +39,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     // ── Clients, Ventes, Factures (Admin, Gestionnaire, Caissier)
     Route::middleware('role:admin,manager,cashier')->group(function () {
         Route::resource('customers', CustomerController::class)->except(['show']);
+        Route::get('sales/exchange-products/search', [SaleController::class, 'searchExchangeProducts'])->name('sales.exchange-products.search');
+        Route::post('sales/exchange-products/store', [SaleController::class, 'storeExchangeProduct'])->name('sales.exchange-products.store');
         Route::resource('sales', SaleController::class)->except(['show']);
         Route::resource('invoices', InvoiceController::class)->except(['show']);
         Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');

@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Services;
 
 use App\Enums\SaleStatus;
@@ -260,7 +261,7 @@ class SaleService
         }
     }
 
-    private function resolveExchangeProduct(array $data): ?Product
+        private function resolveExchangeProduct(array $data): ?Product
     {
         if (! isset($data['sale_type']) || $data['sale_type'] !== SaleType::Echange) {
             return null;
@@ -270,27 +271,7 @@ class SaleService
             return Product::find($data['exchange_product_id']);
         }
 
-        if (empty($data['exchange_product_name'])) {
-            return null;
-        }
-
-        $reference = $data['exchange_product_reference'] ?? Str::upper('EX-' . Str::random(6));
-        while (Product::where('reference', $reference)->exists()) {
-            $reference = Str::upper('EX-' . Str::random(6));
-        }
-
-        return Product::create([
-            'category_id' => $data['exchange_category_id'],
-            'reference' => $reference,
-            'name' => $data['exchange_product_name'],
-            'description' => $data['exchange_product_description'] ?? null,
-            'brand' => $data['exchange_product_brand'] ?? null,
-            'purchase_price' => 0,
-            'sale_price' => $data['exchange_product_estimated_value'] ?? 0,
-            'stock_quantity' => 0,
-            'minimum_stock' => 5,
-            'is_active' => true,
-        ]);
+        return null;
     }
 
     private function buildExchangeDetails(array $data, Product $product): array
