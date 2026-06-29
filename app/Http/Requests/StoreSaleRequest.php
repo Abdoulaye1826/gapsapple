@@ -27,6 +27,7 @@ class StoreSaleRequest extends FormRequest
             'exchange_added_amount' => ['exclude_unless:sale_type,echange', 'nullable', 'numeric', 'min:0'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'status' => ['required', 'in:draft,validated,cancelled'],
+            'payment_method' => ['nullable', 'in:wave,orange_money,cash'],
             'notes' => ['nullable', 'string'],
         ];
     }

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Services\CategoryService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,9 +33,16 @@ class CategoryController extends Controller
         return view('categories.create');
     }
 
-    public function store(StoreCategoryRequest $request): RedirectResponse
+    public function store(StoreCategoryRequest $request): RedirectResponse|JsonResponse
     {
-        $this->categoryService->create($request->validated());
+        $category = $this->categoryService->create($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $category->id,
+                'name' => $category->name,
+            ]);
+        }
 
         return redirect()->route('categories.index')
             ->with('success', 'Catégorie créée avec succès.');

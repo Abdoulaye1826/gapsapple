@@ -31,7 +31,8 @@
       </div>
     </div>
   </form>
-  @include('sales._new_customer_modal')
-  @include('sales._new_exchange_product_modal')
 </div>
+
+@include('sales._new_customer_modal')
+@include('sales._new_exchange_product_modal')
 @endsection

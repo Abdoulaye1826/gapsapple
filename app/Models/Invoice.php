@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\InvoiceStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Facture générée à partir d'une vente validée.
@@ -44,6 +46,27 @@ class Invoice extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    // ─── Attributs calculés ──────────────────────────────────
+
+    protected function amountPaid(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => (float) $this->payments->sum('amount'),
+        );
+    }
+
+    protected function remainingAmount(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => max(0, (float) $this->total_ttc - $this->amount_paid),
+        );
+    }
+
     // ─── Scopes ──────────────────────────────────────────────
 
     public function scopeIssued($query)
@@ -55,5 +78,12 @@ class Invoice extends Model
     {
         return $query->whereYear('issued_at', $year)
             ->whereMonth('issued_at', $month);
+    }
+
+    // ─── Méthodes métier ─────────────────────────────────────
+
+    public function isFullyPaid(): bool
+    {
+        return $this->remaining_amount <= 0.01;
     }
 }

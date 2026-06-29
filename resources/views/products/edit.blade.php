@@ -32,4 +32,7 @@
     </div>
   </form>
 </div>
+
+@include('products._new_category_modal')
+@include('products._new_supplier_modal')
 @endsection

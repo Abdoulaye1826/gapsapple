@@ -36,11 +36,17 @@
   <div class="col-12 mb-3">
     <label class="form-label">Produits</label>
     <div class="card p-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="text-muted">Ajoutez les produits de la vente</div>
-        <button type="button" class="btn btn-sm btn-outline-primary" id="addSaleItemButton">
-          <i class="bi bi-plus-lg"></i> Ajouter un produit
-        </button>
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="text-muted">Ajoutez les produits de la vente</div>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="addSaleItemButton">
+            <i class="bi bi-plus-lg"></i> Ajouter un produit
+          </button>
+        </div>
+        <div class="btn-group price-tier-group" role="group" aria-label="Tarif applicable" id="globalPriceTierGroup">
+          <button type="button" class="btn btn-outline-secondary price-tier-btn active" data-tier="client">client</button>
+          <button type="button" class="btn btn-outline-secondary price-tier-btn" data-tier="fournisseur">Revendeur</button>
+        </div>
       </div>
       <div id="saleItemsContainer">
         @php
@@ -63,8 +69,8 @@
         @endphp
 
         @foreach($saleItems as $index => $saleItem)
-          <div class="sale-item-row row g-3 align-items-end mb-2">
-            <div class="col-md-5">
+          <div class="sale-item-row row g-3 align-items-end mb-2" data-price-tier="client">
+            <div class="col-md-4">
               <label class="form-label">Produit</label>
               <select name="product_id[]" class="form-select @error('product_id.' . $index) is-invalid @enderror" required>
                 <option value="">— Sélectionnez un produit —</option>
@@ -78,7 +84,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label">Prix unitaire</label>
-              <input type="number" step="0.01" min="0" name="unit_price[]" class="form-control @error('unit_price.' . $index) is-invalid @enderror"
+              <input type="number" step="0.01" min="0" name="unit_price[]" class="form-control price-input @error('unit_price.' . $index) is-invalid @enderror"
                      value="{{ old('unit_price.' . $index, $saleItem['unit_price'] ?? 0) }}" required>
               @error('unit_price.' . $index)<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
@@ -104,8 +110,8 @@
   </div>
 
   <template id="saleItemTemplate">
-    <div class="sale-item-row row g-3 align-items-end mb-2">
-      <div class="col-md-5">
+    <div class="sale-item-row row g-3 align-items-end mb-2" data-price-tier="client">
+      <div class="col-md-4">
         <label class="form-label">Produit</label>
         <select name="product_id[]" class="form-select" required>
           <option value="">— Sélectionnez un produit —</option>
@@ -118,7 +124,7 @@
       </div>
       <div class="col-md-2">
         <label class="form-label">Prix unitaire</label>
-        <input type="number" step="0.01" min="0" name="unit_price[]" class="form-control" value="0" required>
+        <input type="number" step="0.01" min="0" name="unit_price[]" class="form-control price-input" value="0" required>
       </div>
       <div class="col-md-2">
         <label class="form-label">Quantité</label>
@@ -136,15 +142,6 @@
     </div>
   </template>
 
-  <div class="col-md-4 mb-3">
-    <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
-    <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
-      <option value="draft" @selected(old('status', $sale?->status->value ?? 'draft') === 'draft')>Brouillon</option>
-      <option value="validated" @selected(old('status', $sale?->status->value ?? '') === 'validated')>Validée</option>
-      <option value="cancelled" @selected(old('status', $sale?->status->value ?? '') === 'cancelled')>Annulée</option>
-    </select>
-    @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-  </div>
 </div>
 
 <div id="exchangeFields" class="border rounded p-3 mb-3" style="display: {{ old('sale_type', $sale?->sale_type->value ?? 'vente') === 'echange' ? 'block' : 'none' }};">
@@ -219,19 +216,40 @@
   </div>
 </div>
 
-<div class="row" id="venteTotalsRow" style="display: {{ old('sale_type', $sale?->sale_type->value ?? 'vente') === 'echange' ? 'none' : 'flex' }};">
-  <div class="col-md-4 mb-3">
-    <label for="discount_amount" class="form-label">Remise (FCFA)</label>
-    <input type="number" step="0.01" min="0" class="form-control @error('discount_amount') is-invalid @enderror"
-           id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $sale?->discount_amount ?? 0) }}">
-    @error('discount_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
-  </div>
-  <div class="col-md-4 mb-3">
+@php
+  $existingPaymentsCount = $sale?->invoice?->payments?->count() ?? 0;
+@endphp
+<div class="row">
+  <div class="col-md-4 mb-3" id="totalColumn" style="display: {{ old('sale_type', $sale?->sale_type->value ?? 'vente') === 'echange' ? 'none' : 'block' }};">
     <label for="total_ttc" class="form-label">Total</label>
     <input type="number" step="0.01" min="0" class="form-control @error('total_ttc') is-invalid @enderror"
            id="total_ttc" name="total_ttc" value="{{ old('total_ttc', $sale?->total_ttc ?? 0) }}" readonly>
     @error('total_ttc')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    <div class="form-text">Le total est calculé automatiquement à partir des produits et de la remise.</div>
+    <div class="form-text">Le total est calculé automatiquement à partir des produits.</div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <label for="payment_method" class="form-label">Mode de paiement</label>
+    <select id="payment_method" name="payment_method" class="form-select @error('payment_method') is-invalid @enderror">
+      <option value="">— Non renseigné —</option>
+      <option value="wave" @selected(old('payment_method') === 'wave')>Wave</option>
+      <option value="orange_money" @selected(old('payment_method') === 'orange_money')>Orange Money</option>
+      <option value="cash" @selected(old('payment_method') === 'cash')>Espèces</option>
+    </select>
+    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    @if($existingPaymentsCount > 0)
+      <div class="form-text">Paiement déjà enregistré. Pour un complément, utilisez la fiche facture.</div>
+    @else
+      <div class="form-text">Enregistre automatiquement le paiement intégral à la validation.</div>
+    @endif
+  </div>
+  <div class="col-md-4 mb-3">
+    <label for="status" class="form-label">Statut <span class="text-danger">*</span></label>
+    <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
+      <option value="draft" @selected(old('status', $sale?->status->value ?? 'draft') === 'draft')>Brouillon</option>
+      <option value="validated" @selected(old('status', $sale?->status->value ?? '') === 'validated')>Validée</option>
+      <option value="cancelled" @selected(old('status', $sale?->status->value ?? '') === 'cancelled')>Annulée</option>
+    </select>
+    @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
   </div>
 </div>
 
@@ -267,20 +285,25 @@
     const addSaleItemButton = document.getElementById('addSaleItemButton');
     const saleItemsContainer = document.getElementById('saleItemsContainer');
     const saleItemTemplate = document.getElementById('saleItemTemplate');
-    const productPrices = {
+    const productClientPrices = {
       @foreach($products as $product)
         {{ $product->id }}: {{ $product->sale_price }},
       @endforeach
     };
+    const productSupplierPrices = {
+      @foreach($products as $product)
+        {{ $product->id }}: {{ $product->supplier_sale_price ?? $product->sale_price }},
+      @endforeach
+    };
 
-    const venteTotalsRow = document.getElementById('venteTotalsRow');
+    const totalColumn = document.getElementById('totalColumn');
 
     if (saleTypeField && exchangeFields) {
       saleTypeField.addEventListener('change', function () {
         const isEchange = this.value === 'echange';
         exchangeFields.style.display = isEchange ? 'block' : 'none';
-        if (venteTotalsRow) {
-          venteTotalsRow.style.display = isEchange ? 'none' : 'flex';
+        if (totalColumn) {
+          totalColumn.style.display = isEchange ? 'none' : 'block';
         }
         calculateTotals();
       });
@@ -312,26 +335,49 @@
         return;
       }
 
-      const discount = parseFloat(document.getElementById('discount_amount')?.value || 0) || 0;
-      const netTotal = Math.max(0, total - discount);
       const totalField = document.getElementById('total_ttc');
 
       if (totalField) {
-        totalField.value = netTotal.toFixed(2);
+        totalField.value = Math.max(0, total).toFixed(2);
       }
+    }
+
+    let globalPriceTier = 'client';
+
+    function applyPriceForTier(row) {
+      const select = row.querySelector('select[name="product_id[]"]');
+      const unitPriceInput = row.querySelector('.price-input');
+      if (!select || !unitPriceInput) return;
+
+      const productId = select.value;
+      const prices = globalPriceTier === 'fournisseur' ? productSupplierPrices : productClientPrices;
+
+      unitPriceInput.value = prices[productId] !== undefined ? Number(prices[productId]).toFixed(2) : 0;
+      row.dataset.priceTier = globalPriceTier;
+    }
+
+    const globalPriceTierGroup = document.getElementById('globalPriceTierGroup');
+    if (globalPriceTierGroup) {
+      globalPriceTierGroup.querySelectorAll('.price-tier-btn').forEach(button => {
+        button.addEventListener('click', function () {
+          globalPriceTier = this.dataset.tier;
+          globalPriceTierGroup.querySelectorAll('.price-tier-btn').forEach(btn => {
+            btn.classList.toggle('active', btn === this);
+          });
+
+          saleItemsContainer.querySelectorAll('.sale-item-row').forEach(row => {
+            applyPriceForTier(row);
+          });
+          calculateTotals();
+        });
+      });
     }
 
     function bindSaleItemEvents(container) {
       container.querySelectorAll('select[name="product_id[]"]').forEach(select => {
         select.addEventListener('change', function () {
           const row = this.closest('.sale-item-row');
-          const unitPriceInput = row.querySelector('input[name="unit_price[]"]');
-
-          if (unitPriceInput) {
-            const productId = this.value;
-            unitPriceInput.value = productPrices[productId] !== undefined ? Number(productPrices[productId]).toFixed(2) : 0;
-          }
-
+          applyPriceForTier(row);
           calculateTotals();
         });
       });

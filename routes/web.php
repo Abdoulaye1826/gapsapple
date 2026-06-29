@@ -5,6 +5,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -65,6 +66,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
         Route::get('invoices/{invoice}/whatsapp-payload', [InvoiceController::class, 'whatsAppPayload'])->name('invoices.whatsapp.payload');
         Route::get('invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsApp'])->name('invoices.whatsapp');
+
+        // ── Paiements de factures ─────────────────────────────
+        Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
+        Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
 
         // ── Gestion des retours ──────────────────────────────
         Route::get('returns', [ReturnController::class, 'index'])->name('returns.index');

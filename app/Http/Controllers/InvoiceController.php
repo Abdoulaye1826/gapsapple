@@ -50,6 +50,8 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice): View
     {
+        $invoice->load(['payments' => fn ($q) => $q->orderByDesc('paid_at')->orderByDesc('id'), 'payments.recordedBy']);
+
         return view('invoices.edit', [
             'invoice' => $invoice,
             'customers' => $this->invoiceService->getCustomers(),

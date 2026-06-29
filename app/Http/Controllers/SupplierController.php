@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Supplier;
 use App\Services\SupplierService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -30,9 +31,16 @@ class SupplierController extends Controller
         return view('suppliers.create');
     }
 
-    public function store(StoreSupplierRequest $request): RedirectResponse
+    public function store(StoreSupplierRequest $request): RedirectResponse|JsonResponse
     {
-        $this->supplierService->create($request->validated());
+        $supplier = $this->supplierService->create($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+            ]);
+        }
 
         return redirect()->route('suppliers.index')
             ->with('success', 'Fournisseur créé avec succès.');

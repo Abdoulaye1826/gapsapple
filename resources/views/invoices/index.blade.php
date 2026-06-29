@@ -40,6 +40,15 @@
 
   <div class="dashboard-summary-card">
     <div class="summary-card-top">
+      <span class="badge bg-warning text-dark">Partielles</span>
+      <i class="bi bi-hourglass-split summary-icon text-warning"></i>
+    </div>
+    <div class="summary-card-value">{{ $summary['partial'] }}</div>
+    <div class="summary-card-label">Partiellement payées</div>
+  </div>
+
+  <div class="dashboard-summary-card">
+    <div class="summary-card-top">
       <span class="badge bg-success">Payées</span>
       <i class="bi bi-cash-stack summary-icon text-success"></i>
     </div>
@@ -70,6 +79,7 @@
         <select name="status" class="form-select">
           <option value="">Tous</option>
           <option value="issued" @selected(($filters['status'] ?? '') === 'issued')>Émise</option>
+          <option value="partial" @selected(($filters['status'] ?? '') === 'partial')>Partiellement payée</option>
           <option value="paid" @selected(($filters['status'] ?? '') === 'paid')>Payée</option>
           <option value="cancelled" @selected(($filters['status'] ?? '') === 'cancelled')>Annulée</option>
         </select>
@@ -108,8 +118,13 @@
             <td>{{ $invoice->customer?->full_name ?? 'Client anonyme' }}</td>
             <td>{{ $invoice->sale?->sale_number ?? '—' }}</td>
             <td>{{ $invoice->issued_at->format('d/m/Y') }}</td>
-            <td>{{ number_format($invoice->total_ttc, 2, ',', ' ') }} FCFA</td>
-            <td><span class="badge {{ $invoice->status->label() === 'Émise' ? 'bg-secondary' : ($invoice->status->label() === 'Payée' ? 'bg-success' : 'bg-danger') }}">{{ $invoice->status->label() }}</span></td>
+            <td>
+              {{ number_format($invoice->total_ttc, 2, ',', ' ') }} FCFA
+              @if($invoice->status->value === 'partial')
+                <br><small class="text-muted">Reste {{ number_format($invoice->remaining_amount, 0, ',', ' ') }} FCFA</small>
+              @endif
+            </td>
+            <td><span class="badge {{ $invoice->status->badgeClass() }}">{{ $invoice->status->label() }}</span></td>
             <td class="text-end">
               <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimer">
                 <i class="bi bi-printer"></i>

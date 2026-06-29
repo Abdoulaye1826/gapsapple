@@ -25,6 +25,7 @@ class Product extends Model
         'brand',
         'purchase_price',
         'sale_price',
+        'supplier_sale_price',
         'stock_quantity',
         'minimum_stock',
         'image',
@@ -34,6 +35,7 @@ class Product extends Model
     protected $casts = [
         'purchase_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'supplier_sale_price' => 'decimal:2',
         'stock_quantity' => 'integer',
         'minimum_stock' => 'integer',
         'is_active' => 'boolean',

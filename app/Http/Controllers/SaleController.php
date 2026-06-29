@@ -63,7 +63,11 @@ class SaleController extends Controller
 
     public function update(UpdateSaleRequest $request, Sale $sale): RedirectResponse
     {
-        $this->saleService->update($sale, $request->validated());
+        try {
+            $this->saleService->update($sale, $request->validated(), auth()->id());
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('sales.index')
             ->with('success', 'Vente mise à jour avec succès.');

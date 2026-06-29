@@ -17,7 +17,7 @@ class InvoiceService
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return Invoice::query()
-            ->with(['customer', 'sale'])
+            ->with(['customer', 'sale', 'payments'])
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where('invoice_number', 'like', "%{$search}%")
                     ->orWhereHas('customer', fn ($q) => $q->where('full_name', 'like', "%{$search}%"));
@@ -38,6 +38,7 @@ class InvoiceService
         return [
             'total' => Invoice::count(),
             'issued' => Invoice::where('status', InvoiceStatus::Issued)->count(),
+            'partial' => Invoice::where('status', InvoiceStatus::Partial)->count(),
             'paid' => Invoice::where('status', InvoiceStatus::Paid)->count(),
             'cancelled' => Invoice::where('status', InvoiceStatus::Cancelled)->count(),
         ];

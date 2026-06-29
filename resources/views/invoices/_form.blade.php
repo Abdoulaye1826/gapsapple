@@ -92,10 +92,14 @@
           <label for="status" class="form-label">Statut</label>
           <select name="status" id="status" class="form-select @error('status') is-invalid @enderror">
             <option value="issued" @selected(old('status', $invoice?->status->value ?? 'issued') === 'issued')>Émise</option>
+            <option value="partial" @selected(old('status', $invoice?->status->value ?? '') === 'partial')>Partiellement payée</option>
             <option value="paid" @selected(old('status', $invoice?->status->value ?? '') === 'paid')>Payée</option>
             <option value="cancelled" @selected(old('status', $invoice?->status->value ?? '') === 'cancelled')>Annulée</option>
           </select>
           @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          @if($invoice?->payments?->isNotEmpty())
+            <div class="form-text">Ce statut est recalculé automatiquement à chaque paiement enregistré ci-dessous.</div>
+          @endif
         </div>
 
         <div class="col-md-8 field-group mb-0">

@@ -8,6 +8,7 @@ use App\Enums\SaleType;
 use App\Enums\StockMovementType;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -23,7 +24,8 @@ class SaleService
 {
     public function __construct(
         private readonly ActivityLogService $activityLog,
-        private readonly InvoiceService $invoiceService
+        private readonly InvoiceService $invoiceService,
+        private readonly PaymentService $paymentService
     ) {
     }
 
@@ -78,7 +80,9 @@ class SaleService
         $data['exchange_details'] = null;
         $data['exchange_voucher_number'] = null;
 
-        return DB::transaction(function () use ($data, $saleType) {
+        $paymentMethod = $data['payment_method'] ?? null;
+
+        return DB::transaction(function () use ($data, $saleType, $userId, $paymentMethod) {
             if ($saleType === SaleType::Echange) {
                 $exchangeProduct = $this->resolveExchangeProduct($data);
                 if ($exchangeProduct !== null) {
@@ -106,18 +110,44 @@ class SaleService
 
             if ($sale->status === SaleStatus::Validated) {
                 $this->applyStockChanges($sale);
-                $this->invoiceService->createFromSale($sale);
+                $invoice = $this->invoiceService->createFromSale($sale);
+                $this->recordInitialPayment($invoice, $paymentMethod, $userId);
             }
 
             return $sale;
         });
     }
 
-    public function update(Sale $sale, array $data): Sale
+    /**
+     * Enregistre automatiquement le paiement intégral de la facture au mode
+     * choisi lors de la saisie de la vente (Wave, Orange Money, Espèces).
+     * Ne fait rien si aucun mode n'a été choisi, si rien n'est dû, ou si un
+     * paiement existe déjà pour cette facture (pour éviter les doublons lors
+     * d'une modification ultérieure).
+     */
+    private function recordInitialPayment(?Invoice $invoice, ?string $paymentMethod, int $userId): void
+    {
+        if ($paymentMethod === null || $invoice === null) {
+            return;
+        }
+
+        if ((float) $invoice->total_ttc <= 0 || $invoice->payments()->exists()) {
+            return;
+        }
+
+        $this->paymentService->store($invoice, [
+            'amount' => (float) $invoice->total_ttc,
+            'method' => $paymentMethod,
+            'paid_at' => now()->toDateString(),
+        ], $userId);
+    }
+
+    public function update(Sale $sale, array $data, int $userId): Sale
     {
         $previousStatus = $sale->status;
         $saleType = isset($data['sale_type']) ? SaleType::from($data['sale_type']) : $sale->sale_type;
         $data['sale_type'] = $saleType;
+        $paymentMethod = $data['payment_method'] ?? null;
 
         if ($saleType === SaleType::Echange) {
             $exchangeProduct = $this->resolveExchangeProduct($data);
@@ -130,7 +160,7 @@ class SaleService
             $data['exchange_voucher_number'] = null;
         }
 
-        return DB::transaction(function () use ($sale, $data, $previousStatus) {
+        return DB::transaction(function () use ($sale, $data, $previousStatus, $userId, $paymentMethod) {
             if (Schema::hasColumn('sale_items', 'returned_at') && $sale->items()->whereNotNull('returned_at')->exists()) {
                 throw new \RuntimeException('Impossible de modifier une vente dont un produit a déjà été retourné.');
             }
@@ -163,15 +193,17 @@ class SaleService
 
                 $invoice = $sale->invoice;
                 if ($invoice === null) {
-                    $this->invoiceService->createFromSale($sale);
+                    $invoice = $this->invoiceService->createFromSale($sale);
                 } else {
                     // La facture existe déjà : on resynchronise ses montants sur
                     // ceux de la vente (ex: montant ajouté modifié lors d'un échange).
-                    $this->invoiceService->update($invoice, [
+                    $invoice = $this->invoiceService->update($invoice, [
                         'subtotal_ht' => $sale->subtotal_ht,
                         'total_ttc' => $sale->total_ttc,
                     ]);
                 }
+
+                $this->recordInitialPayment($invoice, $paymentMethod, $userId);
             }
 
             return $sale->fresh();

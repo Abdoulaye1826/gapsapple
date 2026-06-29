@@ -19,7 +19,7 @@ class UpdateInvoiceRequest extends FormRequest
             'issued_at' => ['required', 'date'],
             'subtotal_ht' => ['required', 'numeric', 'min:0'],
             'total_ttc' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:issued,paid,cancelled'],
+            'status' => ['required', 'in:issued,partial,paid,cancelled'],
             'pdf_path' => ['nullable', 'string', 'max:255'],
         ];
     }

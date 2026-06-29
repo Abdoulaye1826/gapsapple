@@ -220,10 +220,17 @@
 .form-select.is-invalid ~ .invalid-feedback-icon { display: inline-block; color: var(--danger); }
 
 .invalid-feedback {
+    display: none;
     font-size: .78rem;
-    display: flex;
     align-items: center;
     gap: .3rem;
+}
+
+/* Affiché uniquement quand Bootstrap/JS le rend actif (présence d'une
+   erreur réelle) — jamais vide par défaut, y compris dans les modales. */
+.is-invalid ~ .invalid-feedback,
+.invalid-feedback.d-block {
+    display: flex;
 }
 
 .invalid-feedback::before {
@@ -287,6 +294,34 @@
 }
 
 @keyframes btnSpin { to { transform: rotate(360deg); } }
+
+/* ── Bascule tarif client / fournisseur (ligne de vente) ─────
+   Cibles tactiles confortables (≥44px de hauteur) pour iPad/tablette. */
+.price-tier-group {
+    display: flex;
+}
+
+.price-tier-btn {
+    flex: 1;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .55rem .5rem;
+    min-height: 44px;
+    touch-action: manipulation;
+}
+
+.price-tier-btn.active {
+    background-color: var(--copper);
+    border-color: var(--copper);
+    color: #fff;
+}
+
+@media (max-width: 767.98px) {
+    .price-tier-btn {
+        font-size: .85rem;
+        min-height: 48px;
+    }
+}
 
 /* ── Select "recherchable" ───────────────────────────────────── */
 .searchable-select {
