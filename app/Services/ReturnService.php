@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ImeiStatus;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementType;
 use App\Models\SaleItem;
@@ -64,7 +65,34 @@ class ReturnService
         return DB::transaction(function () use ($item, $sale, $userId) {
             $product = $item->product;
 
-            if ($product !== null) {
+            if ($product !== null && $product->tracks_imei) {
+                // Le téléphone redevient disponible et sort de la fiche de la
+                // vente : le stock est recalculé à partir des IMEI restants,
+                // jamais par simple arithmétique.
+                $imei = $item->productImei;
+                $quantityBefore = $product->stock_quantity;
+
+                if ($imei !== null) {
+                    $imei->update([
+                        'status' => ImeiStatus::Available->value,
+                        'sale_id' => null,
+                        'sold_at' => null,
+                    ]);
+                }
+
+                $product->syncImeiStock();
+
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'user_id' => $userId,
+                    'type' => StockMovementType::Return,
+                    'quantity' => 1,
+                    'quantity_before' => $quantityBefore,
+                    'quantity_after' => $product->fresh()->stock_quantity,
+                    'reason' => 'Retour client' . ($imei ? " (IMEI {$imei->imei})" : ''),
+                    'reference' => $sale->sale_number,
+                ]);
+            } elseif ($product !== null) {
                 $quantityBefore = $product->stock_quantity;
                 $quantityAfter = $quantityBefore + $item->quantity;
 

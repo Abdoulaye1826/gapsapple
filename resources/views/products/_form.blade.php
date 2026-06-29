@@ -29,7 +29,7 @@
             <div class="image-preview" style="display:none"></div>
           @endif
         </div>
-        <div class="col-md-5 field-group mb-0">
+        <div class="col-md-5 field-group">
           <label class="form-label">Disponibilité</label>
           <div class="form-check form-switch fs-6 ps-1">
             <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" role="switch"
@@ -37,6 +37,21 @@
             <label class="form-check-label" for="is_active">Produit actif (disponible à la vente)</label>
           </div>
           <div class="form-text">Désactivez-le pour le masquer du catalogue sans le supprimer.</div>
+        </div>
+        <div class="col-md-5 field-group mb-0">
+          <label class="form-label">Suivi IMEI</label>
+          <div class="form-check form-switch fs-6 ps-1">
+            <input class="form-check-input" type="checkbox" id="tracks_imei" name="tracks_imei" value="1" role="switch"
+                   {{ old('tracks_imei', $product->tracks_imei ?? false) ? 'checked' : '' }}
+                   {{ isset($product) && $product->exists && $product->imeis->isNotEmpty() ? 'disabled' : '' }}>
+            <label class="form-check-label" for="tracks_imei">Produit avec suivi IMEI (téléphones)</label>
+          </div>
+          @if(isset($product) && $product->exists && $product->imeis->isNotEmpty())
+            <input type="hidden" name="tracks_imei" value="1">
+            <div class="form-text">Verrouillé : des IMEI sont déjà enregistrés pour ce produit.</div>
+          @else
+            <div class="form-text">Le stock sera géré unité par unité (un IMEI = un appareil), pas en quantité globale.</div>
+          @endif
         </div>
       </div>
     </div>
@@ -196,8 +211,10 @@
         <div class="col-sm-6 field-group">
           <label for="stock_quantity" class="form-label">Stock <span class="req">*</span></label>
           <input type="number" min="0" class="form-control @error('stock_quantity') is-invalid @enderror"
-                 id="stock_quantity" name="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity ?? 0) }}" required>
+                 id="stock_quantity" name="stock_quantity" value="{{ old('stock_quantity', $product->stock_quantity ?? 0) }}"
+                 {{ old('tracks_imei', $product->tracks_imei ?? false) ? 'readonly' : '' }} required>
           @error('stock_quantity')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          <div class="form-text d-none" id="stockImeiNote">Calculé automatiquement à partir des IMEI disponibles (section ci-dessous).</div>
         </div>
         <div class="col-sm-6 field-group">
           <label for="minimum_stock" class="form-label">Seuil d'alerte <span class="req">*</span></label>
@@ -223,6 +240,73 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  {{-- ── Section : IMEI (téléphones) ─────────────────────────── --}}
+  <div class="form-section" id="imeiSection" style="display:none;">
+    <button type="button" class="form-section__header" data-toggle-section aria-expanded="true" aria-controls="section-imei">
+      <span class="form-section__title"><i class="bi bi-phone"></i>IMEI (téléphones)</span>
+      <span class="form-section__badge" id="imeiCountBadge">0</span>
+      <i class="bi bi-chevron-down chevron"></i>
+    </button>
+    <div class="form-section__body" id="section-imei">
+      @if(isset($product) && $product->exists)
+        <div class="table-responsive mb-3" id="imeiListWrap" style="{{ $product->imeis->isEmpty() ? 'display:none' : '' }}">
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th>IMEI</th>
+                <th>Statut</th>
+                <th>Entré le</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody id="imeiTableBody">
+              @foreach($product->imeis as $imei)
+                <tr>
+                  <td class="font-monospace">{{ $imei->imei }}</td>
+                  <td><span class="badge {{ $imei->status->badgeClass() }}">{{ $imei->status->label() }}</span></td>
+                  <td>{{ $imei->created_at->format('d/m/Y') }}</td>
+                  <td class="text-end">
+                    @if($imei->status->value === 'available')
+                      <button type="button" class="btn btn-sm btn-outline-danger delete-imei-btn"
+                              data-url="{{ route('imeis.destroy', $imei) }}">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    @else
+                      <span class="text-muted small">—</span>
+                    @endif
+                  </td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+
+        <label class="form-label">Ajouter des IMEI</label>
+        <div id="newImeiInputs" class="mb-2">
+          <div class="input-group mb-2 new-imei-row">
+            <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+            <input type="text" class="form-control new-imei-input" placeholder="Saisir ou scanner un IMEI (14 à 17 chiffres)" inputmode="numeric" autocomplete="off">
+            <button type="button" class="btn btn-outline-danger remove-imei-row" tabindex="-1"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="addImeiRowButton">
+            <i class="bi bi-plus-lg"></i> Ajouter un IMEI
+          </button>
+          <button type="button" class="btn btn-sm btn-primary" id="saveImeiButton">
+            <i class="bi bi-cloud-arrow-up me-1"></i>Enregistrer les IMEI
+          </button>
+        </div>
+        <div class="invalid-feedback d-block" id="imei_error"></div>
+        <div class="form-text">Chaque ligne = un IMEI. Utilisez une douchette code-barres : elle se comporte comme un clavier et valide la ligne automatiquement.</div>
+      @else
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle me-1"></i>Enregistrez d'abord le produit : vous pourrez ensuite ajouter ses IMEI depuis la page de modification.
+        </div>
+      @endif
     </div>
   </div>
 
@@ -364,6 +448,197 @@
       selectId: 'supplier_id',
       fieldOrder: ['name', 'phone', 'email', 'address', 'country', 'is_active'],
       errorPrefix: 'new_supplier',
+    });
+
+    // ───────────────────────────────────────────────────────────────
+    // Suivi IMEI : affichage conditionnel + gestion des IMEI
+    // ───────────────────────────────────────────────────────────────
+    const tracksImeiCheckbox = document.getElementById('tracks_imei');
+    const imeiSection = document.getElementById('imeiSection');
+    const stockQuantityInput = document.getElementById('stock_quantity');
+    const stockImeiNote = document.getElementById('stockImeiNote');
+
+    function syncImeiVisibility() {
+      const tracksImei = tracksImeiCheckbox?.checked;
+      if (imeiSection) imeiSection.style.display = tracksImei ? '' : 'none';
+      if (stockQuantityInput) stockQuantityInput.readOnly = !!tracksImei;
+      if (stockImeiNote) stockImeiNote.classList.toggle('d-none', !tracksImei);
+    }
+
+    if (tracksImeiCheckbox && !tracksImeiCheckbox.disabled) {
+      tracksImeiCheckbox.addEventListener('change', syncImeiVisibility);
+    }
+    syncImeiVisibility();
+
+    const newImeiInputsWrap = document.getElementById('newImeiInputs');
+    const addImeiRowButton = document.getElementById('addImeiRowButton');
+    const saveImeiButton = document.getElementById('saveImeiButton');
+    const imeiTableBody = document.getElementById('imeiTableBody');
+    const imeiListWrap = document.getElementById('imeiListWrap');
+    const imeiCountBadge = document.getElementById('imeiCountBadge');
+    const imeiErrorEl = document.getElementById('imei_error');
+
+    function newImeiRowTemplate() {
+      const wrap = document.createElement('div');
+      wrap.className = 'input-group mb-2 new-imei-row';
+      wrap.innerHTML = `
+        <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+        <input type="text" class="form-control new-imei-input" placeholder="Saisir ou scanner un IMEI (14 à 17 chiffres)" inputmode="numeric" autocomplete="off">
+        <button type="button" class="btn btn-outline-danger remove-imei-row" tabindex="-1"><i class="bi bi-x-lg"></i></button>
+      `;
+      return wrap;
+    }
+
+    function bindImeiRow(row) {
+      const input = row.querySelector('.new-imei-input');
+      const removeBtn = row.querySelector('.remove-imei-row');
+
+      removeBtn?.addEventListener('click', () => {
+        if (newImeiInputsWrap.querySelectorAll('.new-imei-row').length > 1) {
+          row.remove();
+        } else {
+          input.value = '';
+        }
+      });
+
+      // Une douchette code-barres envoie le code puis "Entrée" : on ajoute
+      // automatiquement une nouvelle ligne et on y place le focus, pour
+      // scanner en rafale sans toucher la souris.
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const rows = Array.from(newImeiInputsWrap.querySelectorAll('.new-imei-input'));
+          const isLast = rows.indexOf(input) === rows.length - 1;
+          if (isLast && input.value.trim() !== '') {
+            addImeiRow();
+          } else if (isLast) {
+            saveImeiButton?.click();
+          }
+        }
+      });
+    }
+
+    function addImeiRow(focus = true) {
+      if (!newImeiInputsWrap) return;
+      const row = newImeiRowTemplate();
+      newImeiInputsWrap.appendChild(row);
+      bindImeiRow(row);
+      if (focus) row.querySelector('.new-imei-input')?.focus();
+    }
+
+    if (newImeiInputsWrap) {
+      newImeiInputsWrap.querySelectorAll('.new-imei-row').forEach(bindImeiRow);
+    }
+
+    addImeiRowButton?.addEventListener('click', () => addImeiRow());
+
+    saveImeiButton?.addEventListener('click', async function () {
+      if (imeiErrorEl) imeiErrorEl.textContent = '';
+
+      const inputs = Array.from(newImeiInputsWrap?.querySelectorAll('.new-imei-input') ?? []);
+      const imeis = inputs.map(i => i.value.trim()).filter(v => v !== '');
+
+      if (imeis.length === 0) {
+        if (imeiErrorEl) imeiErrorEl.textContent = 'Veuillez saisir au moins un IMEI.';
+        return;
+      }
+
+      saveImeiButton.disabled = true;
+      const originalHtml = saveImeiButton.innerHTML;
+      saveImeiButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enregistrement...';
+
+      try {
+        const response = await fetch('{{ isset($product) && $product->exists ? route('products.imeis.store', $product) : '#' }}', {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ imeis }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (imeiErrorEl) imeiErrorEl.textContent = data.error || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Erreur lors de l\'enregistrement.');
+          return;
+        }
+
+        (data.imeis || []).forEach((imei) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="font-monospace">${imei.imei}</td>
+            <td><span class="badge bg-success">Disponible</span></td>
+            <td>—</td>
+            <td class="text-end text-muted small">—</td>
+          `;
+          imeiTableBody?.appendChild(tr);
+        });
+
+        if (imeiListWrap) imeiListWrap.style.display = '';
+        if (imeiCountBadge) imeiCountBadge.textContent = imeiTableBody?.querySelectorAll('tr').length ?? 0;
+        if (stockQuantityInput && data.stock_quantity !== undefined) {
+          stockQuantityInput.value = data.stock_quantity;
+        }
+
+        newImeiInputsWrap.innerHTML = '';
+        addImeiRow(false);
+
+        if (window.UiToast) {
+          window.UiToast.show(imeis.length + ' IMEI ajouté(s) avec succès.', 'success');
+        }
+      } catch (error) {
+        if (imeiErrorEl) imeiErrorEl.textContent = 'Erreur réseau lors de l\'enregistrement.';
+      } finally {
+        saveImeiButton.disabled = false;
+        saveImeiButton.innerHTML = originalHtml;
+      }
+    });
+
+    if (imeiCountBadge && imeiTableBody) {
+      imeiCountBadge.textContent = imeiTableBody.querySelectorAll('tr').length;
+    }
+
+    // Suppression d'un IMEI disponible (AJAX, sans <form> imbriqué dans le
+    // formulaire principal du produit — cela casserait sa soumission).
+    document.querySelectorAll('.delete-imei-btn').forEach((btn) => {
+      btn.addEventListener('click', async function () {
+        if (!confirm('Supprimer cet IMEI ?')) return;
+
+        const row = btn.closest('tr');
+        btn.disabled = true;
+
+        try {
+          const response = await fetch(btn.dataset.url, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'Accept': 'application/json',
+            },
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            if (window.UiToast) window.UiToast.show(data.error || 'Erreur lors de la suppression.', 'error');
+            btn.disabled = false;
+            return;
+          }
+
+          row?.remove();
+          if (imeiCountBadge && imeiTableBody) {
+            imeiCountBadge.textContent = imeiTableBody.querySelectorAll('tr').length;
+          }
+          if (stockQuantityInput && data.stock_quantity !== undefined) {
+            stockQuantityInput.value = data.stock_quantity;
+          }
+          if (window.UiToast) window.UiToast.show('IMEI supprimé.', 'success');
+        } catch (error) {
+          if (window.UiToast) window.UiToast.show('Erreur réseau lors de la suppression.', 'error');
+          btn.disabled = false;
+        }
+      });
     });
   });
 </script>

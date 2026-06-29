@@ -66,6 +66,18 @@ class Sale extends Model
         return $this->hasOne(Invoice::class);
     }
 
+    /** IMEI vendus via cette vente. */
+    public function soldImeis(): HasMany
+    {
+        return $this->hasMany(ProductImei::class, 'sale_id');
+    }
+
+    /** IMEI reçus en stock via cette vente d'échange. */
+    public function receivedImeis(): HasMany
+    {
+        return $this->hasMany(ProductImei::class, 'exchange_sale_id');
+    }
+
     // ─── Scopes ──────────────────────────────────────────────
 
     public function scopeValidated($query)

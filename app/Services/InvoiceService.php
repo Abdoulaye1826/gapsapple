@@ -28,7 +28,7 @@ class InvoiceService
             ->when($filters['customer_id'] ?? null, function ($query, $customerId) {
                 $query->where('customer_id', $customerId);
             })
-            ->orderByDesc('issued_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -52,7 +52,7 @@ class InvoiceService
     public function getAvailableSales(?Sale $currentSale = null)
     {
         $query = Sale::query()
-            ->orderByDesc('sale_date');
+            ->orderByDesc('id');
 
         if ($currentSale !== null) {
             $query->where(function ($subQuery) use ($currentSale) {
@@ -129,11 +129,27 @@ class InvoiceService
         $this->activityLog->log('delete', null, "Facture supprimée : {$invoiceNumber}");
     }
 
+    /**
+     * Numéro de facture continu (F-000001, F-000002, ...), jamais
+     * réinitialisé par jour. Basé sur la plus grande valeur numérique déjà
+     * utilisée (toutes factures confondues, qu'elles viennent d'une vente
+     * ou d'une saisie manuelle) pour ne jamais entrer en collision.
+     */
     private function generateInvoiceNumber(): string
     {
-        $date = now()->format('Ymd');
-        $count = Invoice::whereDate('created_at', now()->toDateString())->count() + 1;
+        $max = Invoice::query()
+            ->get(['invoice_number'])
+            ->pluck('invoice_number')
+            ->filter()
+            ->map(function ($value) {
+                // Ne retient que le suffixe numérique final, jamais une
+                // éventuelle date intercalée dans l'ancien format.
+                preg_match('/(\d+)$/', $value, $matches);
 
-        return sprintf('F-%s-%04d', $date, $count);
+                return isset($matches[1]) ? (int) $matches[1] : 0;
+            })
+            ->max();
+
+        return sprintf('F-%06d', ((int) $max) + 1);
     }
 }

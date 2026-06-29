@@ -312,6 +312,9 @@
           {{ $exchangeDetails['reference'] ?? '' }}
           @if(!empty($exchangeDetails['brand'])) — {{ $exchangeDetails['brand'] }} @endif
         </div>
+        @if(!empty($exchangeDetails['imei']))
+          <div class="product-ref">IMEI : {{ $exchangeDetails['imei'] }}</div>
+        @endif
         <div class="value-row">
           <span class="label">Quantité apportée</span>
           <span class="val">{{ $broughtQuantity }}</span>
@@ -325,7 +328,12 @@
         <div class="items-list">
           @forelse($sale->items as $item)
             <div class="item-row">
-              <span>{{ $item->product?->name ?? '—' }}</span>
+              <span>
+                {{ $item->product?->name ?? '—' }}
+                @if($item->productImei)
+                  <br><small>IMEI : {{ $item->productImei->imei }}</small>
+                @endif
+              </span>
               <span class="qty">x{{ $item->quantity }}</span>
             </div>
           @empty
@@ -366,7 +374,12 @@
           @forelse($sale->items as $index => $item)
             <tr>
               <td style="text-align:center;color:#9fa8da;font-size:11px;">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</td>
-              <td class="desc">{{ $item->product?->name ?? '—' }}</td>
+              <td class="desc">
+                {{ $item->product?->name ?? '—' }}
+                @if($item->productImei)
+                  <small>IMEI : {{ $item->productImei->imei }}</small>
+                @endif
+              </td>
               <td class="qty"><span class="qty-badge">{{ $item->quantity }}</span></td>
               <td class="unit">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
               <td class="total">{{ number_format($item->line_total ?? ($item->quantity * $item->unit_price), 0, ',', ' ') }} FCFA</td>

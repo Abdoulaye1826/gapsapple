@@ -205,7 +205,7 @@ class DashboardService
     {
         return Invoice::query()
             ->with(['customer', 'sale'])
-            ->orderByDesc('issued_at')
+            ->orderByDesc('id')
             ->limit($limit)
             ->get()
             ->all();

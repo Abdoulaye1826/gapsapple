@@ -30,6 +30,7 @@ class Product extends Model
         'minimum_stock',
         'image',
         'is_active',
+        'tracks_imei',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class Product extends Model
         'stock_quantity' => 'integer',
         'minimum_stock' => 'integer',
         'is_active' => 'boolean',
+        'tracks_imei' => 'boolean',
     ];
 
     // ─── Relations ───────────────────────────────────────────
@@ -61,6 +63,11 @@ class Product extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function imeis(): HasMany
+    {
+        return $this->hasMany(ProductImei::class);
     }
 
     // ─── Accesseurs ──────────────────────────────────────────
@@ -165,5 +172,16 @@ class Product extends Model
     public function isOutOfStock(): bool
     {
         return $this->stock_quantity <= 0;
+    }
+
+    /**
+     * Recalcule le stock à partir du nombre d'IMEI réellement disponibles.
+     * Source de vérité unique pour les produits suivis par IMEI : garantit
+     * qu'aucune incohérence n'est possible entre stock_quantity et les IMEI.
+     */
+    public function syncImeiStock(): void
+    {
+        $count = $this->imeis()->available()->count();
+        $this->update(['stock_quantity' => $count]);
     }
 }

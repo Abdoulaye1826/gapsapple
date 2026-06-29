@@ -46,6 +46,9 @@
         @elseif($product->isLowStock())
           <span class="badge bg-warning text-dark">Stock faible</span>
         @endif
+        @if($product->tracks_imei)
+          <span class="badge bg-primary"><i class="bi bi-phone me-1"></i>Suivi IMEI</span>
+        @endif
       </div>
     </div>
   </div>
@@ -98,6 +101,53 @@
         @endif
       </div>
     </div>
+
+    @if($product->tracks_imei)
+      <div class="detail-card mb-4">
+        <div class="detail-card__header"><i class="bi bi-phone"></i>Historique des IMEI</div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>IMEI</th>
+                <th>Statut</th>
+                <th>Entré le</th>
+                <th>Vendu le</th>
+                <th>Client</th>
+                <th>Facture</th>
+              </tr>
+            </thead>
+            <tbody>
+              @forelse($product->imeis as $imei)
+                <tr>
+                  <td class="font-monospace">{{ $imei->imei }}</td>
+                  <td><span class="badge {{ $imei->status->badgeClass() }}">{{ $imei->status->label() }}</span></td>
+                  <td>
+                    {{ $imei->created_at->format('d/m/Y') }}
+                    @if($imei->exchangeSale)
+                      <br><small class="text-muted">Échange {{ $imei->exchangeSale->exchange_voucher_number }}</small>
+                    @endif
+                  </td>
+                  <td>{{ $imei->sold_at?->format('d/m/Y') ?? '—' }}</td>
+                  <td>{{ $imei->sale?->customer?->full_name ?? '—' }}</td>
+                  <td>
+                    @if($imei->sale?->invoice)
+                      <a href="{{ route('invoices.print', $imei->sale->invoice) }}" target="_blank">{{ $imei->sale->invoice->invoice_number }}</a>
+                    @else
+                      —
+                    @endif
+                  </td>
+                </tr>
+              @empty
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4">Aucun IMEI enregistré pour le moment.</td>
+                </tr>
+              @endforelse
+            </tbody>
+          </table>
+        </div>
+      </div>
+    @endif
 
     @if($product->stockMovements->isNotEmpty())
       @include('products.partials.stock-movements')

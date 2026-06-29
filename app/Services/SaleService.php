@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Enums\ImeiStatus;
 use App\Enums\SaleStatus;
 use App\Enums\SaleType;
 use App\Enums\StockMovementType;
@@ -10,6 +11,7 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\ProductImei;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StockMovement;
@@ -48,7 +50,7 @@ class SaleService
             ->when($filters['customer_id'] ?? null, function ($query, $customerId) {
                 $query->where('customer_id', $customerId);
             })
-            ->orderByDesc('sale_date')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -99,6 +101,7 @@ class SaleService
             foreach ($this->buildSaleItems($data) as $itemData) {
                 $sale->items()->create([
                     'product_id' => $itemData['product_id'],
+                    'product_imei_id' => $this->resolveItemImei($itemData)?->id,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
                     'discount' => 0,
@@ -179,6 +182,7 @@ class SaleService
             foreach ($this->buildSaleItems($data) as $itemData) {
                 $sale->items()->create([
                     'product_id' => $itemData['product_id'],
+                    'product_imei_id' => $this->resolveItemImei($itemData)?->id,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
                     'discount' => 0,
@@ -235,6 +239,27 @@ class SaleService
                 continue;
             }
 
+            if ($product->tracks_imei) {
+                // Le stock des produits suivis par IMEI n'est jamais ajusté
+                // par une simple arithmétique : on remet les IMEI concernés
+                // dans leur état d'origine, puis on recalcule le stock.
+                if ($movement->type === StockMovementType::Sale) {
+                    ProductImei::where('product_id', $product->id)
+                        ->where('sale_id', $sale->id)
+                        ->update(['status' => ImeiStatus::Available->value, 'sale_id' => null, 'sold_at' => null]);
+                } elseif ($movement->type === StockMovementType::Return) {
+                    // Le téléphone avait été ajouté au stock via cet échange :
+                    // annuler l'échange retire ce téléphone du catalogue.
+                    ProductImei::where('product_id', $product->id)
+                        ->where('exchange_sale_id', $sale->id)
+                        ->delete();
+                }
+
+                $movement->delete();
+                $product->syncImeiStock();
+                continue;
+            }
+
             $quantityBefore = $product->stock_quantity;
             $quantity = $movement->quantity;
 
@@ -253,7 +278,7 @@ class SaleService
 
     private function applyStockChanges(Sale $sale): void
     {
-        $sale->loadMissing('items');
+        $sale->loadMissing('items.product', 'items.productImei');
 
         foreach ($sale->items as $item) {
             $product = $item->product;
@@ -261,17 +286,21 @@ class SaleService
                 continue;
             }
 
+            if ($product->tracks_imei) {
+                $this->sellItemImei($sale, $product, $item);
+                continue;
+            }
+
             $quantityBefore = $product->stock_quantity;
             $quantity = $item->quantity;
             $quantityAfter = max(0, $quantityBefore - $quantity);
-            $movementType = StockMovementType::Sale;
             $reason = $sale->isVente() ? 'Vente validée' : 'Échange - produit vendu';
 
             $product->update(['stock_quantity' => $quantityAfter]);
             StockMovement::create([
                 'product_id' => $product->id,
                 'user_id' => $sale->user_id,
-                'type' => $movementType,
+                'type' => StockMovementType::Sale,
                 'quantity' => $quantity,
                 'quantity_before' => $quantityBefore,
                 'quantity_after' => $quantityAfter,
@@ -282,7 +311,9 @@ class SaleService
 
         if ($sale->isEchange() && isset($sale->exchange_details['product_id'], $sale->exchange_details['quantity'])) {
             $returnProduct = Product::find($sale->exchange_details['product_id']);
-            if ($returnProduct !== null) {
+            if ($returnProduct !== null && $returnProduct->tracks_imei) {
+                $this->receiveExchangeImei($sale, $returnProduct);
+            } elseif ($returnProduct !== null) {
                 $quantityBefore = $returnProduct->stock_quantity;
                 $quantity = (int) $sale->exchange_details['quantity'];
                 $quantityAfter = $quantityBefore + $quantity;
@@ -300,6 +331,75 @@ class SaleService
                 ]);
             }
         }
+    }
+
+    /**
+     * Marque l'IMEI rattaché à une ligne de vente comme vendu et resynchronise
+     * le stock du produit à partir du nombre d'IMEI restant disponibles.
+     */
+    private function sellItemImei(Sale $sale, Product $product, SaleItem $item): void
+    {
+        $imei = $item->productImei;
+
+        if ($imei === null || $imei->status === ImeiStatus::Sold) {
+            throw new \RuntimeException("L'IMEI sélectionné pour {$product->name} n'est plus disponible.");
+        }
+
+        $quantityBefore = $product->stock_quantity;
+        $imei->update(['status' => ImeiStatus::Sold->value, 'sale_id' => $sale->id, 'sold_at' => now()]);
+        $product->syncImeiStock();
+
+        $reason = ($sale->isVente() ? 'Vente validée' : 'Échange - produit vendu') . " (IMEI {$imei->imei})";
+
+        StockMovement::create([
+            'product_id' => $product->id,
+            'user_id' => $sale->user_id,
+            'type' => StockMovementType::Sale,
+            'quantity' => 1,
+            'quantity_before' => $quantityBefore,
+            'quantity_after' => $product->fresh()->stock_quantity,
+            'reason' => $reason,
+            'reference' => $sale->sale_number,
+        ]);
+    }
+
+    /**
+     * Ajoute au stock le téléphone apporté par le client lors d'un échange,
+     * identifié par son IMEI (saisi ou scanné), et le marque disponible.
+     */
+    private function receiveExchangeImei(Sale $sale, Product $product): void
+    {
+        $imeiValue = trim((string) ($sale->exchange_details['imei'] ?? ''));
+
+        if ($imeiValue === '') {
+            throw new \RuntimeException("L'IMEI du téléphone apporté par le client est obligatoire pour {$product->name}.");
+        }
+
+        if (ProductImei::where('imei', $imeiValue)->exists()) {
+            throw new \RuntimeException("L'IMEI {$imeiValue} est déjà enregistré dans le système.");
+        }
+
+        $quantityBefore = $product->stock_quantity;
+
+        ProductImei::create([
+            'product_id' => $product->id,
+            'imei' => $imeiValue,
+            'status' => ImeiStatus::Available,
+            'exchange_sale_id' => $sale->id,
+        ]);
+
+        $product->syncImeiStock();
+
+        StockMovement::create([
+            'product_id' => $product->id,
+            'user_id' => $sale->user_id,
+            'type' => StockMovementType::Return,
+            'quantity' => 1,
+            'quantity_before' => $quantityBefore,
+            'quantity_after' => $product->fresh()->stock_quantity,
+            'reason' => "Échange validé (IMEI {$imeiValue} reçu)",
+            'reference' => $sale->sale_number,
+        ]);
     }
 
         private function resolveExchangeProduct(array $data): ?Product
@@ -324,26 +424,58 @@ class SaleService
             'brand' => $product->brand,
             'description' => $product->description,
             'category_id' => $product->category_id,
-            'quantity' => $data['exchange_quantity'] ?? 0,
+            'quantity' => $product->tracks_imei ? 1 : ($data['exchange_quantity'] ?? 0),
             'added_amount' => $data['exchange_added_amount'] ?? 0,
+            'imei' => $product->tracks_imei ? trim((string) ($data['exchange_imei'] ?? '')) : null,
         ];
     }
 
+    /**
+     * Numéro d'échange continu (BEX-000001, BEX-000002, ...), jamais
+     * réinitialisé par jour.
+     */
     private function generateExchangeVoucherNumber(): string
     {
-        $date = now()->format('Ymd');
-        $count = Sale::where('exchange_voucher_number', 'like', "BEX-{$date}-%")->count() + 1;
+        $next = $this->nextContinuousNumber(Sale::query(), 'exchange_voucher_number');
 
-        return sprintf('BEX-%s-%04d', $date, $count);
+        return sprintf('BEX-%06d', $next);
     }
 
+    /**
+     * Numéro de vente continu (V-000001, E-000001, ...), partagé entre
+     * ventes et échanges pour garantir une suite ininterrompue, jamais
+     * réinitialisée par jour.
+     */
     private function generateSaleNumber(SaleType $type): string
     {
         $prefix = $type === SaleType::Vente ? 'V' : 'E';
-        $date = now()->format('Ymd');
-        $count = Sale::whereDate('created_at', now()->toDateString())->count() + 1;
+        $next = $this->nextContinuousNumber(Sale::query(), 'sale_number');
 
-        return sprintf('%s-%s-%04d', $prefix, $date, $count);
+        return sprintf('%s-%06d', $prefix, $next);
+    }
+
+    /**
+     * Détermine le prochain numéro d'une séquence continue à partir de la
+     * plus grande valeur numérique déjà utilisée dans la colonne donnée
+     * (quel que soit son préfixe), pour ne jamais réutiliser ou réinitialiser
+     * un numéro même si des enregistrements ont été supprimés.
+     */
+    private function nextContinuousNumber($query, string $column): int
+    {
+        $max = $query->get([$column])
+            ->pluck($column)
+            ->filter()
+            ->map(function ($value) {
+                // Ne retient que le suffixe numérique final (ex: "0002" dans
+                // "V-20260629-0002" ou "000002" dans "V-000002"), jamais une
+                // éventuelle date intercalée dans l'ancien format.
+                preg_match('/(\d+)$/', $value, $matches);
+
+                return isset($matches[1]) ? (int) $matches[1] : 0;
+            })
+            ->max();
+
+        return ((int) $max) + 1;
     }
 
     private function buildSaleItems(array $data): array
@@ -351,6 +483,7 @@ class SaleService
         $productIds = Arr::wrap($data['product_id'] ?? []);
         $quantities = Arr::wrap($data['quantity'] ?? []);
         $unitPrices = Arr::wrap($data['unit_price'] ?? []);
+        $imeis = Arr::wrap($data['imei'] ?? []);
 
         $items = [];
         foreach ($productIds as $index => $productId) {
@@ -358,19 +491,57 @@ class SaleService
                 continue;
             }
 
+            $product = Product::find($productId);
+            $tracksImei = (bool) $product?->tracks_imei;
+
             $quantity = isset($quantities[$index]) ? (int) $quantities[$index] : 1;
             $unitPrice = isset($unitPrices[$index]) ? (float) $unitPrices[$index] : 0;
-            $lineTotal = round(max(0, $quantity) * max(0, $unitPrice), 2);
+            // Un IMEI = un appareil : la quantité est toujours 1 pour ces produits.
+            $quantity = $tracksImei ? 1 : max(1, $quantity);
+            $lineTotal = round($quantity * max(0, $unitPrice), 2);
 
             $items[] = [
                 'product_id' => $productId,
-                'quantity' => max(1, $quantity),
+                'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'line_total' => $lineTotal,
+                'tracks_imei' => $tracksImei,
+                'imei' => $tracksImei ? trim((string) ($imeis[$index] ?? '')) : null,
             ];
         }
 
         return $items;
+    }
+
+    /**
+     * Résout l'IMEI saisi/scanné pour une ligne de vente vers l'unité
+     * disponible correspondante. Lève une exception claire en cas d'IMEI
+     * manquant, inconnu ou déjà vendu — jamais d'incohérence silencieuse.
+     */
+    private function resolveItemImei(array $itemData): ?ProductImei
+    {
+        if (empty($itemData['tracks_imei'])) {
+            return null;
+        }
+
+        $imeiValue = $itemData['imei'] ?? null;
+        if (empty($imeiValue)) {
+            throw new \RuntimeException('Veuillez saisir ou scanner un IMEI pour ce produit.');
+        }
+
+        $imei = ProductImei::where('product_id', $itemData['product_id'])
+            ->where('imei', $imeiValue)
+            ->first();
+
+        if ($imei === null) {
+            throw new \RuntimeException("L'IMEI {$imeiValue} n'est pas enregistré pour ce produit.");
+        }
+
+        if ($imei->status === ImeiStatus::Sold) {
+            throw new \RuntimeException("L'IMEI {$imeiValue} a déjà été vendu.");
+        }
+
+        return $imei;
     }
 
     private function calculateTotals(array $data): array

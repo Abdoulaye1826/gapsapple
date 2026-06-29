@@ -53,18 +53,20 @@
           $oldProductIds = old('product_id', $sale?->items->pluck('product_id')->toArray() ?? []);
           $oldQuantities = old('quantity', $sale?->items->pluck('quantity')->toArray() ?? []);
           $oldUnitPrices = old('unit_price', $sale?->items->pluck('unit_price')->toArray() ?? []);
+          $oldImeis = old('imei', $sale?->items->map(fn ($i) => $i->productImei?->imei)->toArray() ?? []);
 
           $saleItems = collect(is_array($oldProductIds) ? $oldProductIds : [$oldProductIds])
-              ->map(function ($productId, $index) use ($oldQuantities, $oldUnitPrices) {
+              ->map(function ($productId, $index) use ($oldQuantities, $oldUnitPrices, $oldImeis) {
                   return [
                       'product_id' => $productId,
                       'quantity' => is_array($oldQuantities) ? ($oldQuantities[$index] ?? 1) : 1,
                       'unit_price' => is_array($oldUnitPrices) ? ($oldUnitPrices[$index] ?? 0) : ($oldUnitPrices ?? 0),
+                      'imei' => is_array($oldImeis) ? ($oldImeis[$index] ?? '') : '',
                   ];
               });
 
           if ($saleItems->isEmpty()) {
-              $saleItems = collect([['product_id' => '', 'quantity' => 1, 'unit_price' => 0]]);
+              $saleItems = collect([['product_id' => '', 'quantity' => 1, 'unit_price' => 0, 'imei' => '']]);
           }
         @endphp
 
@@ -103,6 +105,15 @@
                 <i class="bi bi-trash"></i>
               </button>
             </div>
+            <div class="col-12 imei-row-field" style="display:none;">
+              <label class="form-label">IMEI <span class="text-danger">*</span></label>
+              <input type="text" name="imei[]" class="form-control imei-input @error('imei.' . $index) is-invalid @enderror"
+                     list="imei-options-{{ $index }}" value="{{ old('imei.' . $index, $saleItem['imei'] ?? '') }}"
+                     placeholder="Scanner ou saisir l'IMEI" autocomplete="off">
+              <datalist class="imei-datalist" id="imei-options-{{ $index }}"></datalist>
+              @error('imei.' . $index)<div class="invalid-feedback">{{ $message }}</div>@enderror
+              <div class="form-text imei-count-text"></div>
+            </div>
           </div>
         @endforeach
       </div>
@@ -138,6 +149,12 @@
         <button type="button" class="btn btn-outline-danger btn-remove-item" style="margin-top: 32px;">
           <i class="bi bi-trash"></i>
         </button>
+      </div>
+      <div class="col-12 imei-row-field" style="display:none;">
+        <label class="form-label">IMEI <span class="text-danger">*</span></label>
+        <input type="text" name="imei[]" class="form-control imei-input" list="" placeholder="Scanner ou saisir l'IMEI" autocomplete="off">
+        <datalist class="imei-datalist"></datalist>
+        <div class="form-text imei-count-text"></div>
       </div>
     </div>
   </template>
@@ -197,11 +214,22 @@
       </div>
     </div>
 
-    <div class="col-md-2 mb-3">
+    <div class="col-md-2 mb-3" id="exchangeQuantityField">
       <label for="exchange_quantity" class="form-label">Quantit&eacute; apport&eacute;e</label>
       <input type="number" step="1" min="1" class="form-control @error('exchange_quantity') is-invalid @enderror"
              id="exchange_quantity" name="exchange_quantity" value="{{ old('exchange_quantity', $sale?->exchange_details['quantity'] ?? 1) }}">
       @error('exchange_quantity')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+  </div>
+
+  <div class="row" id="exchangeImeiRow" style="display:none;">
+    <div class="col-md-6 mb-3">
+      <label for="exchange_imei" class="form-label">IMEI du t&eacute;l&eacute;phone apport&eacute; <span class="text-danger">*</span></label>
+      <input type="text" class="form-control @error('exchange_imei') is-invalid @enderror"
+             id="exchange_imei" name="exchange_imei" value="{{ old('exchange_imei', $sale?->exchange_details['imei'] ?? '') }}"
+             placeholder="Scanner ou saisir l'IMEI" autocomplete="off">
+      @error('exchange_imei')<div class="invalid-feedback">{{ $message }}</div>@enderror
+      <div class="form-text">Ce t&eacute;l&eacute;phone sera ajout&eacute; au stock et marqu&eacute; disponible apr&egrave;s validation.</div>
     </div>
   </div>
 
@@ -295,6 +323,12 @@
         {{ $product->id }}: {{ $product->supplier_sale_price ?? $product->sale_price }},
       @endforeach
     };
+    const productTracksImei = {
+      @foreach($products as $product)
+        {{ $product->id }}: {{ $product->tracks_imei ? 'true' : 'false' }},
+      @endforeach
+    };
+    let imeiRowCounter = 1000;
 
     const totalColumn = document.getElementById('totalColumn');
 
@@ -373,11 +407,80 @@
       });
     }
 
+    /**
+     * Affiche/masque le champ IMEI d'une ligne selon que le produit
+     * sélectionné est suivi par IMEI, verrouille la quantité à 1 dans ce
+     * cas, et alimente la liste des IMEI disponibles (saisie ou scan).
+     */
+    async function syncImeiFieldForRow(row, { keepImei = false } = {}) {
+      const select = row.querySelector('select[name="product_id[]"]');
+      const quantityInput = row.querySelector('input[name="quantity[]"]');
+      const imeiField = row.querySelector('.imei-row-field');
+      const imeiInput = row.querySelector('.imei-input');
+      const imeiDatalist = row.querySelector('.imei-datalist');
+      const countText = row.querySelector('.imei-count-text');
+      if (!select || !imeiField || !imeiInput) return;
+
+      const productId = select.value;
+      const tracksImei = productId && productTracksImei[productId];
+
+      if (!tracksImei) {
+        imeiField.style.display = 'none';
+        if (!keepImei) imeiInput.value = '';
+        if (quantityInput) {
+          quantityInput.readOnly = false;
+        }
+        return;
+      }
+
+      imeiField.style.display = '';
+      if (quantityInput) {
+        quantityInput.value = 1;
+        quantityInput.readOnly = true;
+      }
+      if (!keepImei) imeiInput.value = '';
+
+      if (countText) countText.textContent = 'Chargement des IMEI disponibles...';
+
+      try {
+        const response = await fetch(`/products/${productId}/available-imeis`, {
+          headers: { Accept: 'application/json' },
+        });
+        const imeis = await response.json();
+
+        if (imeiDatalist) {
+          imeiDatalist.innerHTML = imeis.map(v => `<option value="${v}"></option>`).join('');
+        }
+        if (countText) {
+          countText.textContent = imeis.length > 0
+            ? imeis.length + ' IMEI disponible(s) — scannez ou choisissez dans la liste.'
+            : 'Aucun IMEI disponible pour ce produit.';
+        }
+      } catch (error) {
+        if (countText) countText.textContent = "Impossible de charger les IMEI disponibles.";
+      }
+    }
+
     function bindSaleItemEvents(container) {
+      const rows = container.classList?.contains('sale-item-row')
+        ? [container]
+        : Array.from(container.querySelectorAll('.sale-item-row'));
+
+      rows.forEach(row => {
+        const imeiInput = row.querySelector('.imei-input');
+        const imeiDatalist = row.querySelector('.imei-datalist');
+        if (imeiInput && imeiDatalist && !imeiDatalist.id) {
+          imeiRowCounter += 1;
+          imeiDatalist.id = 'imei-options-' + imeiRowCounter;
+          imeiInput.setAttribute('list', imeiDatalist.id);
+        }
+      });
+
       container.querySelectorAll('select[name="product_id[]"]').forEach(select => {
         select.addEventListener('change', function () {
           const row = this.closest('.sale-item-row');
           applyPriceForTier(row);
+          syncImeiFieldForRow(row);
           calculateTotals();
         });
       });
@@ -406,6 +509,9 @@
     }
 
     bindSaleItemEvents(saleItemsContainer);
+    saleItemsContainer.querySelectorAll('.sale-item-row').forEach(row => {
+      syncImeiFieldForRow(row, { keepImei: true });
+    });
     calculateTotals();
 
     // ───────────────────────────────────────────────────────────────
@@ -476,6 +582,14 @@
     const exchangeProductNotFound = document.getElementById('exchangeProductNotFound');
     const exchangeProductClear = document.getElementById('exchangeProductClear');
     const openNewExchangeProductModal = document.getElementById('openNewExchangeProductModal');
+
+    @php
+      $currentExchangeProductId = old('exchange_product_id', $sale?->exchange_details['product_id'] ?? '');
+      $currentExchangeProductTracksImei = $currentExchangeProductId
+          ? (bool) (\App\Models\Product::find($currentExchangeProductId)?->tracks_imei)
+          : false;
+    @endphp
+    syncExchangeImeiField({{ $currentExchangeProductTracksImei ? 'true' : 'false' }});
 
     let exchangeSearchTimeout = null;
     let exchangeActiveIndex = -1;
@@ -594,6 +708,31 @@
         ${product.brand ? '<span class="text-muted">(' + product.brand + ')</span>' : ''}
       `;
       exchangeProductSelected.style.display = 'flex';
+
+      syncExchangeImeiField(!!product.tracks_imei);
+    }
+
+    /**
+     * Produit apport\u00e9 suivi par IMEI : on demande son IMEI (saisie/scan)
+     * et on verrouille la quantit\u00e9 \u00e0 1 (un t\u00e9l\u00e9phone = une unit\u00e9).
+     */
+    function syncExchangeImeiField(tracksImei) {
+      const imeiRow = document.getElementById('exchangeImeiRow');
+      const quantityField = document.getElementById('exchange_quantity');
+      const exchangeImeiInput = document.getElementById('exchange_imei');
+
+      if (imeiRow) imeiRow.style.display = tracksImei ? '' : 'none';
+      if (quantityField) {
+        if (tracksImei) {
+          quantityField.value = 1;
+          quantityField.readOnly = true;
+        } else {
+          quantityField.readOnly = false;
+        }
+      }
+      if (!tracksImei && exchangeImeiInput) {
+        exchangeImeiInput.value = '';
+      }
     }
 
     // Effacer la s\u00e9lection

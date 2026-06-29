@@ -38,14 +38,23 @@ class UpdateProductRequest extends FormRequest
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'remove_image' => ['boolean'],
             'is_active' => ['boolean'],
+            'tracks_imei' => ['boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        $tracksImei = $this->boolean('tracks_imei');
+        $product = $this->route('product');
+
         $this->merge([
             'is_active' => $this->boolean('is_active'),
             'remove_image' => $this->boolean('remove_image'),
+            'tracks_imei' => $tracksImei,
+            // Le stock d'un produit suivi par IMEI n'est jamais saisi
+            // manuellement : on conserve la valeur déjà synchronisée avec
+            // les IMEI enregistrés plutôt que d'accepter une saisie libre.
+            'stock_quantity' => $tracksImei ? $product?->stock_quantity ?? 0 : $this->input('stock_quantity'),
         ]);
     }
 }

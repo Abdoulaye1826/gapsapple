@@ -61,7 +61,12 @@ class ProductController extends Controller
 
     public function show(Product $product): View
     {
-        $product->load(['category', 'stockMovements' => fn ($q) => $q->latest()->limit(10)]);
+        $product->load([
+            'category',
+            'supplier',
+            'stockMovements' => fn ($q) => $q->latest()->limit(10),
+            'imeis' => fn ($q) => $q->latest()->with(['sale.customer', 'sale.invoice', 'exchangeSale']),
+        ]);
 
         return view('products.show', compact('product'));
     }
@@ -70,6 +75,7 @@ class ProductController extends Controller
     {
         $categories = $this->categoryService->activeList();
         $suppliers = $this->supplierService->activeList();
+        $product->load(['imeis' => fn ($q) => $q->orderByDesc('id')]);
 
         return view('products.edit', compact('product', 'categories', 'suppliers'));
     }

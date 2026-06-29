@@ -7,6 +7,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductImeiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReturnController;
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('products', ProductController::class);
         Route::resource('suppliers', SupplierController::class)->except(['show']);
         Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+
+        // ── IMEI (téléphones) ────────────────────────────────
+        Route::post('products/{product}/imeis', [ProductImeiController::class, 'store'])->name('products.imeis.store');
+        Route::delete('imeis/{imei}', [ProductImeiController::class, 'destroy'])->name('imeis.destroy');
     });
 
     // ── Rapports (Admin, Gestionnaire, Caissier) ──────────────
@@ -56,6 +61,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('customers', CustomerController::class)->except(['show']);
         Route::get('sales/exchange-products/search', [SaleController::class, 'searchExchangeProducts'])->name('sales.exchange-products.search');
         Route::post('sales/exchange-products/store', [SaleController::class, 'storeExchangeProduct'])->name('sales.exchange-products.store');
+        Route::get('products/{product}/available-imeis', [ProductImeiController::class, 'available'])->name('products.imeis.available');
         Route::resource('sales', SaleController::class)->except(['show']);
         Route::get('sales/{sale}/exchange-voucher/print', [SaleController::class, 'printExchangeVoucher'])->name('sales.exchange-voucher.print');
         Route::get('sales/{sale}/exchange-voucher/download', [SaleController::class, 'downloadExchangeVoucher'])->name('sales.exchange-voucher.download');

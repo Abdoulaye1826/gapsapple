@@ -81,7 +81,7 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice): View
     {
-        $invoice->load(['sale.customer', 'sale.user', 'sale.items.product']);
+        $invoice->load(['sale.customer', 'sale.user', 'sale.items.product', 'sale.items.productImei']);
         $sale = $invoice->sale;
         abort_if($sale === null, 404);
         $downloadUrl = route('invoices.download', $invoice);
@@ -91,7 +91,7 @@ class InvoiceController extends Controller
 
     public function download(Invoice $invoice): Response
     {
-        $invoice->load(['sale.customer', 'sale.user', 'sale.items.product']);
+        $invoice->load(['sale.customer', 'sale.user', 'sale.items.product', 'sale.items.productImei']);
         $sale = $invoice->sale;
         $downloadUrl = null;
 

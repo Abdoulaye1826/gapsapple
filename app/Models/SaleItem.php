@@ -16,6 +16,7 @@ class SaleItem extends Model
     protected $fillable = [
         'sale_id',
         'product_id',
+        'product_imei_id',
         'quantity',
         'unit_price',
         'discount',
@@ -42,6 +43,11 @@ class SaleItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function productImei(): BelongsTo
+    {
+        return $this->belongsTo(ProductImei::class);
     }
 
     public function returnedBy(): BelongsTo

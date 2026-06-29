@@ -45,7 +45,11 @@ class SaleController extends Controller
 
     public function store(StoreSaleRequest $request): RedirectResponse
     {
-        $this->saleService->create($request->validated(), auth()->id());
+        try {
+            $this->saleService->create($request->validated(), auth()->id());
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('sales.index')
             ->with('success', 'Vente créée avec succès.');
@@ -101,7 +105,7 @@ class SaleController extends Controller
             })
             ->orderBy('name')
             ->limit(15)
-            ->get(['id', 'reference', 'name', 'brand', 'sale_price', 'category_id']);
+            ->get(['id', 'reference', 'name', 'brand', 'sale_price', 'category_id', 'tracks_imei']);
 
         return response()->json($products);
     }
@@ -156,7 +160,7 @@ class SaleController extends Controller
     {
         abort_unless($sale->isEchange(), 404);
 
-        $sale->load(['customer', 'user', 'items.product']);
+        $sale->load(['customer', 'user', 'items.product', 'items.productImei']);
         $invoice = null;
         $downloadUrl = route('sales.exchange-voucher.download', $sale);
 
@@ -170,7 +174,7 @@ class SaleController extends Controller
     {
         abort_unless($sale->isEchange(), 404);
 
-        $sale->load(['customer', 'user', 'items.product']);
+        $sale->load(['customer', 'user', 'items.product', 'items.productImei']);
         $invoice = null;
         $downloadUrl = null;
 

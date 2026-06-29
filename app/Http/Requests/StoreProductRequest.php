@@ -29,6 +29,7 @@ class StoreProductRequest extends FormRequest
             'minimum_stock' => ['required', 'integer', 'min:0'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'is_active' => ['boolean'],
+            'tracks_imei' => ['boolean'],
         ];
     }
 
@@ -47,6 +48,10 @@ class StoreProductRequest extends FormRequest
     {
         $this->merge([
             'is_active' => $this->boolean('is_active'),
+            'tracks_imei' => $this->boolean('tracks_imei'),
+            // Le stock d'un produit suivi par IMEI est toujours recalculé à
+            // partir des IMEI enregistrés, jamais saisi manuellement.
+            'stock_quantity' => $this->boolean('tracks_imei') ? 0 : $this->input('stock_quantity'),
         ]);
     }
 }
