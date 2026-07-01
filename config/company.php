@@ -1,4 +1,4 @@
-?<?php
+<?php
 
 return [
     'name' => env('COMPANY_NAME', 'MBOUP GAMING'),

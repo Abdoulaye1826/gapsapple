@@ -1,4 +1,4 @@
-?<?php
+<?php
 
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;

@@ -1,4 +1,4 @@
-?/**
+/**
  * MBOUP GAMING SI — UI des formulaires (ajout/modification)
  *
  * Fournit, sans dépendance externe :

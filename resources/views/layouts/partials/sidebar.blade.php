@@ -1,4 +1,4 @@
-?<aside class="sidebar" id="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="brand-icon">
       <img src="{{ asset('images/logo.jpeg') }}" alt="MBOUP GAMING">
