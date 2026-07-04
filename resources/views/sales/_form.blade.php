@@ -396,6 +396,27 @@
     const remainingDisplay = document.getElementById('remaining_amount_display');
     let amountGivenTouched = amountGivenField ? amountGivenField.value !== '' : false;
 
+    /**
+     * Le champ "Montant donné" est masqué et sans objet pour un échange (le
+     * montant y est le montant ajouté par le client, saisi ailleurs). On le
+     * désactive dans ce cas pour qu'il soit exclu de la soumission du
+     * formulaire — sinon une valeur programmée pendant que le type était
+     * encore "vente" (ex: 0,00 calculé avant que l'utilisateur ne bascule
+     * sur "Échange") restait soumise telle quelle et empêchait
+     * l'enregistrement du paiement choisi (le montant ajouté validé
+     * apparaissait alors intégralement en "reste à payer").
+     */
+    function syncAmountGivenAvailability(isEchange) {
+      if (!amountGivenField) return;
+      amountGivenField.disabled = isEchange;
+      if (isEchange) {
+        amountGivenField.value = '';
+        amountGivenTouched = false;
+      }
+    }
+
+    syncAmountGivenAvailability(saleTypeField ? saleTypeField.value === 'echange' : false);
+
     if (saleTypeField && exchangeFields) {
       saleTypeField.addEventListener('change', function () {
         const isEchange = this.value === 'echange';
@@ -403,6 +424,7 @@
         if (totalColumn) {
           totalColumn.style.display = isEchange ? 'none' : 'flex';
         }
+        syncAmountGivenAvailability(isEchange);
         calculateTotals();
       });
     }
@@ -564,6 +586,18 @@
           imeiRowCounter += 1;
           imeiDatalist.id = 'imei-options-' + imeiRowCounter;
           imeiInput.setAttribute('list', imeiDatalist.id);
+        }
+
+        // Une douchette code-barres envoie le code puis "Entrée" : sans ce
+        // garde-fou, ça soumettrait prématurément tout le formulaire de
+        // vente au premier scan (même produit ou client pas encore saisis).
+        if (imeiInput && !imeiInput.dataset.enterGuardBound) {
+          imeiInput.dataset.enterGuardBound = '1';
+          imeiInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+            }
+          });
         }
       });
 
@@ -797,6 +831,17 @@
         const modal = bootstrap.Modal.getInstance(document.getElementById('newCustomerModal'));
         modal.hide();
         newCustomerForm.reset();
+      });
+    }
+
+    // Une douchette code-barres envoie le code puis "Entrée" : sans ce
+    // garde-fou, ça soumettrait prématurément tout le formulaire de vente.
+    const exchangeImeiInput = document.getElementById('exchange_imei');
+    if (exchangeImeiInput) {
+      exchangeImeiInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+        }
       });
     }
 

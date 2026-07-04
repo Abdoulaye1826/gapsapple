@@ -87,7 +87,15 @@ class SaleService
             ->endDateFrom(\Carbon\Carbon::parse($data['sale_date']));
 
         $paymentMethod = $data['payment_method'] ?? null;
-        $amountGiven = isset($data['amount_given']) && $data['amount_given'] !== '' ? (float) $data['amount_given'] : null;
+        // Le paiement partiel via "amount_given" ne s'applique qu'aux ventes :
+        // pour un échange, le total de la facture EST le montant ajouté par
+        // le client (pas de saisie de montant partiel distincte). On ignore
+        // toute valeur reçue pour ce champ afin qu'un résidu client (ex: 0
+        // calculé avant que l'utilisateur ne bascule sur "Échange") ne puisse
+        // jamais empêcher l'enregistrement du paiement intégral choisi.
+        $amountGiven = $saleType === SaleType::Echange
+            ? null
+            : (isset($data['amount_given']) && $data['amount_given'] !== '' ? (float) $data['amount_given'] : null);
 
         return DB::transaction(function () use ($data, $saleType, $userId, $paymentMethod, $amountGiven) {
             if ($saleType === SaleType::Echange) {
@@ -168,7 +176,11 @@ class SaleService
         $saleType = isset($data['sale_type']) ? SaleType::from($data['sale_type']) : $sale->sale_type;
         $data['sale_type'] = $saleType;
         $paymentMethod = $data['payment_method'] ?? null;
-        $amountGiven = isset($data['amount_given']) && $data['amount_given'] !== '' ? (float) $data['amount_given'] : null;
+        // Voir le commentaire équivalent dans create() : le paiement partiel
+        // via "amount_given" ne s'applique qu'aux ventes, jamais aux échanges.
+        $amountGiven = $saleType === SaleType::Echange
+            ? null
+            : (isset($data['amount_given']) && $data['amount_given'] !== '' ? (float) $data['amount_given'] : null);
         $data['warranty_end_date'] = WarrantyDuration::from($data['warranty_duration'] ?? 'none')
             ->endDateFrom($sale->sale_date);
 
