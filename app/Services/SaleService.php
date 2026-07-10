@@ -260,7 +260,8 @@ class SaleService
         $pdf = PDF::loadView('documents.sale_document', compact('sale', 'invoice', 'downloadUrl'))
             ->setPaper('a4', 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
-            ->setOption('isHtml5ParserEnabled', true);
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('defaultMediaType', 'print');
 
         return $pdf->output();
     }

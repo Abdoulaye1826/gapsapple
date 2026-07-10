@@ -36,8 +36,6 @@
       margin: 0 auto;
       background: #fff;
       position: relative;
-      overflow: hidden;
-      padding-bottom: 80px;
     }
 
     .header { padding: 0; position: relative; }
@@ -125,8 +123,8 @@
     .remarks-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 
     .footer {
-      position: absolute; left: 0; right: 0; bottom: 0;
       border-top: 1px solid var(--text);
+      margin-top: 24px;
       padding: 14px 32px; display: flex; justify-content: space-between; align-items: center;
     }
     .footer-contact { color: var(--text-muted); font-size: 11px; line-height: 1.7; }

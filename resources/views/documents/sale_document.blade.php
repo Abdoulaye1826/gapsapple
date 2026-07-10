@@ -46,9 +46,9 @@
       margin: 0 auto;
       background: #fff;
       position: relative;
-      overflow: hidden;
-      padding-bottom: 80px;
     }
+
+    .top-bar { height: 7px; background: var(--accent); }
 
     /* ── HEADER : fond blanc, simple filet de séparation ── */
     .header {
@@ -56,75 +56,71 @@
       position: relative;
     }
 
-    .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 22px 32px 16px;
-    }
-
-    .brand { display: flex; align-items: center; gap: 14px; }
+    /* Table plutôt que flex : DomPDF ne centre pas fiablement les
+       éléments flex verticalement, alors qu'il gère très bien
+       l'alignement vertical (vertical-align) des cellules de tableau. */
+    .header-table { width: 100%; border-collapse: collapse; }
+    .header-table td { vertical-align: middle; }
+    .header-td-logo { width: 110px; padding: 26px 0 20px 32px; }
+    .header-td-doc { padding: 26px 32px 20px 0; }
 
     .brand-icon {
-      width: 78px; height: 78px;
+      width: 82px; height: 82px;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+      text-align: center;
       border: 2px solid var(--accent);
       overflow: hidden;
     }
 
     .brand-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-    .brand-name { color: var(--text); font-size: 22px; font-weight: 700; letter-spacing: -0.3px; line-height: 1; }
-    .brand-sub { color: var(--text-muted); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
-
     .header-doc { text-align: right; }
-    .doc-type { color: var(--text-muted); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px; }
-    .doc-number { color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .doc-type { color: var(--accent); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .doc-number { color: var(--text); font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    .doc-date { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
 
-    /* Badge de statut : juste un contour, pas d'aplat de couleur */
-    .doc-status {
-      display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 3px;
+    .header-divider { height: 1px; background: var(--line); }
+
+    /* ── META BAND : encart client / dates, fond gris clair ──
+       Table plutôt que CSS Grid : DomPDF ne supporte pas display:grid,
+       les deux colonnes (client / dates) ne s'alignaient pas côte à côte. */
+    .meta-band-wrap {
+      margin: 20px 32px 0;
+      padding: 18px 24px;
+      background: #f7f7f9;
+      border-radius: 4px;
+    }
+    .meta-band { width: 100%; border-collapse: collapse; }
+    .meta-band td { vertical-align: top; }
+    .meta-td-right { width: 190px; }
+
+    .meta-left h4, .meta-right h4 { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+    .meta-left p { color: var(--text); font-size: 13px; line-height: 1.6; }
+    .meta-left .name { font-size: 14px; font-weight: 700; color: var(--text); }
+
+    .meta-right { text-align: right; }
+    /* Table pour les lignes label/valeur : même raison, display:flex
+       n'alignait pas ces lignes de façon fiable sous DomPDF. */
+    .meta-rows { width: 100%; border-collapse: collapse; }
+    .meta-rows td { padding-bottom: 6px; text-align: right; white-space: nowrap; }
+    .meta-rows tr:last-child td { padding-bottom: 0; }
+    .meta-rows .meta-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); padding-right: 16px; width: 100%; }
+    .meta-rows .meta-value { font-size: 13px; font-weight: 600; color: var(--text); }
+
+    .status-badge {
+      display: inline-block; background: var(--accent); color: #fff;
       font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-      border: 1px solid var(--text);
-      color: var(--text);
+      padding: 4px 12px; border-radius: 3px;
     }
-
-    .header-stripe { height: 3px; background: var(--accent); }
-
-    /* ── META BAND : fond blanc, filet inférieur uniquement ── */
-    .meta-band {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: start;
-      gap: 20px;
-      padding: 18px 32px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .meta-block h4 { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
-    .meta-block p { color: var(--text); font-size: 13px; line-height: 1.6; }
-    .meta-block .name { font-size: 14px; font-weight: 700; color: var(--text); }
-    .meta-divider { width: 1px; background: var(--line); align-self: stretch; }
-    .meta-block.right { text-align: right; }
-
-    /* Date : simple encadré, plus de pastille pleine */
-    .date-badge {
-      display: inline-flex; flex-direction: column; align-items: center;
-      border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; min-width: 76px;
-    }
-    .date-badge .day { font-size: 18px; font-weight: 700; line-height: 1.1; color: var(--text); }
-    .date-badge .month { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-    .date-badge .year { font-size: 10px; color: var(--text-muted); }
 
     /* ── ITEMS TABLE (facture vente) — sans fond, lignes fines ── */
     .items-section { padding: 0 32px 8px; }
 
     .items-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-    .items-table thead tr { border-bottom: 2px solid var(--text); }
+    .items-table thead tr { background: var(--text); }
     .items-table thead th {
-      padding: 8px 10px; font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; color: var(--text); text-align: left;
+      padding: 10px; font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: #fff; text-align: left;
     }
     .items-table thead th.num    { text-align: center; }
     .items-table thead th.amount { text-align: right; }
@@ -139,8 +135,14 @@
 
     .qty-badge { display: inline-block; border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; font-size: 12px; font-weight: 600; }
 
-    /* ── ÉCHANGE : PRODUITS — cartes en simple encadré ── */
-    .exchange-section { padding: 22px 32px 8px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: stretch; }
+    /* ── ÉCHANGE : PRODUITS — cartes en simple encadré ──
+       Table plutôt que CSS Grid : DomPDF ne supporte pas display:grid,
+       les deux cartes ne se plaçaient pas correctement côte à côte. */
+    .exchange-section { padding: 22px 32px 8px; }
+    .exchange-table { width: 100%; border-collapse: collapse; }
+    .exchange-table td { vertical-align: top; }
+    .exchange-td-card { width: 46%; }
+    .exchange-td-arrow { width: 8%; text-align: center; vertical-align: middle; }
 
     .exchange-card { border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
     .exchange-card h4 { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
@@ -150,7 +152,33 @@
     .exchange-card .value-row .label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
     .exchange-card .value-row .val   { font-size: 15px; font-weight: 700; color: var(--text); }
 
-    .exchange-arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text); font-weight: 700; }
+    /* Icône échange dessinée en CSS (cercle + flèche double reliée par un
+       trait) plutôt qu'un caractère Unicode : plus jolie et fiable sous
+       DomPDF (les glyphes flèche du sous-ensemble de police intégré ne
+       s'affichaient pas). padding-top pousse le cercle au niveau vertical
+       des cartes (vertical-align:middle seul ne suffisait pas sous DomPDF). */
+    .exchange-td-arrow { padding-top: 56px; }
+    .exchange-arrow-circle {
+      width: 42px; height: 42px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      position: relative;
+      margin: 0 auto;
+      background: #fff;
+    }
+    .arrow-line {
+      position: absolute; left: 10px; right: 10px; top: 20px;
+      height: 2px;
+      background: var(--accent);
+    }
+    .arrow-tri {
+      position: absolute; top: 15px;
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .arrow-tri-left  { left: 7px;  border-right: 7px solid var(--accent); }
+    .arrow-tri-right { right: 7px; border-left: 7px solid var(--accent); }
 
     .items-list { margin-top: 8px; }
     .items-list .item-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text); padding: 2px 0; }
@@ -159,8 +187,12 @@
     /* ── TOTAUX ──
        Même bloc pour le « Total final » (vente) et le « Montant ajouté par le
        client » (échange) : un simple encadré à double filet, sans aplat. */
-    .totals-row { display: flex; justify-content: flex-end; padding: 14px 32px 8px; }
-    .totals-box { width: 290px; }
+    /* margin-left:auto plutôt que flex justify-content:flex-end :
+       DomPDF ne poussait pas le bloc des totaux à droite, il restait à
+       gauche. Les marges automatiques sur un bloc de largeur fixe sont
+       fiables sous DomPDF. */
+    .totals-row { padding: 14px 32px 8px; }
+    .totals-box { width: 290px; margin-left: auto; }
 
     .totals-line { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line-light); font-size: 13px; color: var(--text-muted); }
     .totals-line:last-of-type { border-bottom: none; }
@@ -182,7 +214,7 @@
     }
     .amount-words span { font-weight: 700; color: var(--text); }
 
-    /* ── REMARQUES / CONDITIONS — simple encadré ── */
+    /* ── GARANTIE — simple encadré ── */
     .remarks-section { padding: 16px 32px; }
 
     .info-card { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
@@ -190,19 +222,42 @@
     .info-card p { font-size: 13px; color: var(--text); font-weight: 600; }
     .remarks-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 
-    /* ── FOOTER ──
-       Fond blanc, simple filet supérieur. Positionné en absolu par rapport
-       à .page (qui réserve l'espace via padding-bottom) afin de toujours
-       rester collé au bas de la page, même si le contenu est court (cas
-       du bon d'échange). Compatible navigateur et DomPDF. */
-    .footer {
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
-      border-top: 1px solid var(--text);
-      padding: 14px 32px; display: flex; justify-content: space-between; align-items: center;
+    /* ── SIGNATURE / CACHET ──
+       Grand espace blanc réservé (marge haute) pour que le client et le
+       magasin puissent signer/tamponner le document imprimé. */
+    /* Table plutôt que flex : les deux blocs signature se chevauchaient
+       sous DomPDF avec justify-content:space-between. */
+    .signature-section { width: 100%; border-collapse: collapse; margin-top: 110px; }
+    .signature-td { width: 50%; vertical-align: top; padding: 0 32px; }
+    .signature-block { text-align: center; }
+    .signature-line { border-top: 1px solid var(--line); margin-bottom: 8px; }
+    .signature-block p { font-size: 11px; color: var(--text-muted); }
+
+    .section-divider { border-top: 1px solid var(--line); margin: 0 32px 12px; }
+
+    /* ── CONDITIONS DE PAIEMENT — texte simple, sans encadré ── */
+    .conditions-section { padding: 0 32px; }
+    .conditions-section h4 {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 8px;
     }
-    .footer-contact { color: var(--text-muted); font-size: 11px; line-height: 1.7; }
-    .footer-thanks { color: var(--text); font-size: 13px; font-weight: 700; }
+    .conditions-text { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── FOOTER ──
+       Les conditions de paiement et les coordonnées de la boutique forment
+       ensemble le pied de page : elles doivent rester collées au bas de la
+       page. En flux normal elles se retrouvaient plus haut si le contenu
+       était court. */
+    .footer { padding: 12px 32px 0; text-align: center; }
+    .footer-line { color: var(--text-muted); font-size: 10.5px; }
+    .footer-line strong { color: var(--text); }
+    .footer-legal { color: var(--text-muted); font-size: 9.5px; margin-top: 4px; }
+
+    /* Collé au bas de la page elle-même (position:absolute par rapport à
+       .page, qui est position:relative) — pas au bas de la fenêtre du
+       navigateur. Avec position:fixed le footer suivait le défilement à
+       l'écran au lieu de rester ancré au document. */
+    .page-footer { position: absolute; left: 0; right: 0; bottom: 36px; }
 
     @media print {
       html, body { margin: 0; padding: 0; background: #fff; }
@@ -246,67 +301,72 @@
 </div>
 
 <div class="page">
+  <div class="top-bar"></div>
 
-  {{-- ── EN-TÊTE ── --}}
+  {{-- ── EN-TÊTE ── logo et infos alignés via un tableau (fiable sous DomPDF) --}}
   <div class="header">
-    <div class="header-inner">
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="{{ $logoSrc }}" alt="GAPS APPLE">
-        </div>
-        <div>
-          <div class="brand-name">GAPS APPLE</div>
-          <div class="brand-sub">Système d'information</div>
-        </div>
-      </div>
-      <div class="header-doc">
-        <div class="doc-type">{{ $documentType }}</div>
-        <div class="doc-number">{{ $documentNumber }}</div>
-        @if(!$isEchange && $invoice)
-          <span class="doc-status {{ 'status-' . $invoice->status->value }}">
-            {{ $invoice->status->label() }}
-          </span>
-        @endif
-      </div>
-    </div>
+    <table class="header-table">
+      <tr>
+        <td class="header-td-logo">
+          <div class="brand-icon">
+            <img src="{{ $logoSrc }}" alt="GAPS APPLE">
+          </div>
+        </td>
+        <td class="header-td-doc">
+          <div class="header-doc">
+            <div class="doc-type">{{ $documentType }}</div>
+            <div class="doc-number">#{{ $documentNumber }}</div>
+            @php $headerDate = $isEchange ? $sale->sale_date : ($invoice->issued_at ?? $sale->sale_date); @endphp
+            <div class="doc-date">{{ $headerDate->translatedFormat('d F Y') }}</div>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
-  <div class="header-stripe"></div>
+  <div class="header-divider"></div>
 
-  {{-- ── MÉTA : Client / Dates ── --}}
-  <div class="meta-band">
-    <div class="meta-block">
-      <h4>Client</h4>
-      @if($sale->customer)
-        <p class="name">{{ $sale->customer->full_name }}</p>
-        @if($sale->customer->phone)
-          <p>📞 {{ $sale->customer->phone }}</p>
-        @endif
-        @if(!$isEchange && $sale->customer->email)
-          <p>✉️ {{ $sale->customer->email }}</p>
-        @endif
-        @if(!$isEchange && $sale->customer->address)
-          <p>📍 {{ $sale->customer->address }}</p>
-        @endif
-      @else
-        <p class="name">Client anonyme</p>
-      @endif
-    </div>
+  {{-- ── MÉTA : Client / Dates ── alignés via un tableau (fiable sous DomPDF) --}}
+  <div class="meta-band-wrap">
+    <table class="meta-band">
+      <tr>
+        <td class="meta-left">
+          <h4>Facturé à</h4>
+          @if($sale->customer)
+            <p class="name">{{ $sale->customer->full_name }}</p>
+            @if($sale->customer->phone)
+              <p>{{ $sale->customer->phone }}</p>
+            @endif
+            @if(!$isEchange && $sale->customer->email)
+              <p>{{ $sale->customer->email }}</p>
+            @endif
+            @if(!$isEchange && $sale->customer->address)
+              <p>{{ $sale->customer->address }}</p>
+            @endif
+          @else
+            <p class="name">Client anonyme</p>
+          @endif
+        </td>
 
-    <div class="meta-divider"></div>
-
-    <div class="meta-block right">
-      <h4>Date</h4>
-      @php $metaDate = $isEchange ? $sale->sale_date : ($invoice->issued_at ?? $sale->sale_date); @endphp
-      <div class="date-badge" style="margin-left:auto;">
-        <span class="day">{{ $metaDate->format('d') }}</span>
-        <span class="month">{{ $metaDate->translatedFormat('M') }}</span>
-        <span class="year">{{ $metaDate->format('Y') }}</span>
-      </div>
-      @if(!$isEchange)
-        <h4 style="margin-top:14px;">Vente associée</h4>
-        <p style="font-weight:600;color:#8a6f1f;">{{ $sale->sale_number }}</p>
-      @endif
-    </div>
+        <td class="meta-td-right">
+          @if(!$isEchange)
+            <div class="meta-right">
+              <table class="meta-rows">
+                @if($invoice)
+                  <tr>
+                    <td class="meta-label">Statut</td>
+                    <td class="meta-value"><span class="status-badge">{{ $invoice->status->label() }}</span></td>
+                  </tr>
+                @endif
+                <tr>
+                  <td class="meta-label">Vente</td>
+                  <td class="meta-value">{{ $sale->sale_number }}</td>
+                </tr>
+              </table>
+            </div>
+          @endif
+        </td>
+      </tr>
+    </table>
   </div>
 
   @if($isEchange)
@@ -319,46 +379,58 @@
     @endphp
 
     <div class="exchange-section">
-      <div class="exchange-card">
-        <h4>Produit apporté par le client</h4>
-        <div class="product-name">{{ $exchangeDetails['name'] ?? '—' }}</div>
-        <div class="product-ref">
-          {{ $exchangeDetails['reference'] ?? '' }}
-          @if(!empty($exchangeDetails['brand'])) — {{ $exchangeDetails['brand'] }} @endif
-        </div>
-        @if(!empty($exchangeDetails['imei']))
-          <div class="product-ref">IMEI : {{ $exchangeDetails['imei'] }}</div>
-        @endif
-        <div class="value-row">
-          <span class="label">Quantité apportée</span>
-          <span class="val">{{ $broughtQuantity }}</span>
-        </div>
-      </div>
-
-      <div class="exchange-arrow">⇄</div>
-
-      <div class="exchange-card">
-        <h4>Produit remis par le magasin</h4>
-        <div class="items-list">
-          @forelse($sale->items as $item)
-            <div class="item-row">
-              <span>
-                {{ $item->product?->name ?? '—' }}
-                @if($item->productImei)
-                  <br><small>IMEI : {{ $item->productImei->imei }}</small>
-                @endif
-              </span>
-              <span class="qty">x{{ $item->quantity }}</span>
+      <table class="exchange-table">
+        <tr>
+          <td class="exchange-td-card">
+            <div class="exchange-card">
+              <h4>Produit apporté par le client</h4>
+              <div class="product-name">{{ $exchangeDetails['name'] ?? '—' }}</div>
+              <div class="product-ref">
+                {{ $exchangeDetails['reference'] ?? '' }}
+                @if(!empty($exchangeDetails['brand'])) — {{ $exchangeDetails['brand'] }} @endif
+              </div>
+              @if(!empty($exchangeDetails['imei']))
+                <div class="product-ref">IMEI : {{ $exchangeDetails['imei'] }}</div>
+              @endif
+              <div class="value-row">
+                <span class="label">Quantité apportée</span>
+                <span class="val">{{ $broughtQuantity }}</span>
+              </div>
             </div>
-          @empty
-            <div class="item-row"><span>—</span></div>
-          @endforelse
-        </div>
-        <div class="value-row">
-          <span class="label">Quantité remise</span>
-          <span class="val">{{ $givenQuantity }}</span>
-        </div>
-      </div>
+          </td>
+          <td class="exchange-td-arrow">
+            <div class="exchange-arrow-circle">
+              <span class="arrow-line"></span>
+              <span class="arrow-tri arrow-tri-left"></span>
+              <span class="arrow-tri arrow-tri-right"></span>
+            </div>
+          </td>
+          <td class="exchange-td-card">
+            <div class="exchange-card">
+              <h4>Produit remis par le magasin</h4>
+              <div class="items-list">
+                @forelse($sale->items as $item)
+                  <div class="item-row">
+                    <span>
+                      {{ $item->product?->name ?? '—' }}
+                      @if($item->productImei)
+                        <br><small>IMEI : {{ $item->productImei->imei }}</small>
+                      @endif
+                    </span>
+                    <span class="qty">x{{ $item->quantity }}</span>
+                  </div>
+                @empty
+                  <div class="item-row"><span>—</span></div>
+                @endforelse
+              </div>
+              <div class="value-row">
+                <span class="label">Quantité remise</span>
+                <span class="val">{{ $givenQuantity }}</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     {{-- ── MONTANT AJOUTÉ : seul montant financier affiché, au même emplacement
@@ -471,11 +543,34 @@
     </div>
   @endif
 
-  {{-- ── REMARQUES / CONDITIONS ── identique pour les factures de vente et les bons d'échange --}}
-  <div class="remarks-section">
-    <div class="info-card">
-      <h4>Remarques / Conditions</h4>
-      <p class="remarks-text">
+  {{-- ── SIGNATURE / CACHET ── espace réservé pour la signature du client et le cachet du magasin --}}
+  <table class="signature-section">
+    <tr>
+      <td class="signature-td">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p>Date et Signature Client</p>
+        </div>
+      </td>
+      <td class="signature-td">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p>Pour {{ config('company.name') }}</p>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {{-- ── PIED DE PAGE ── conditions de paiement + coordonnées boutique,
+       collé au bas de la page (position fixe à l'impression/PDF).
+       Identique sur toutes les factures de vente et tous les bons
+       d'échange. Aucune date/heure de génération. --}}
+  <div class="page-footer">
+    <div class="section-divider"></div>
+
+    <div class="conditions-section">
+      <h4>Conditions de paiement</h4>
+      <p class="conditions-text">
         @php $remarksText = $invoice?->notes ?? $sale->notes; @endphp
         @if($remarksText)
           {{ $remarksText }}
@@ -484,20 +579,16 @@
         @endif
       </p>
     </div>
-  </div>
 
-  {{-- ── PIED DE PAGE ──
-       Identique sur toutes les factures de vente et tous les bons d'échange
-       (aperçu, impression, PDF téléchargé). Aucune date/heure de génération. --}}
-  <div class="footer">
-    <div class="footer-contact">
-      <div>📧 {{ config('company.email') }}</div>
-      <div>📞 {{ config('company.phone') }}</div>
-      <div>📍 {{ config('company.address_line1') }}, {{ config('company.address_line2') }}</div>
-      <div>Ninea : {{ config('company.ninea') }} — RC : {{ config('company.rc') }}</div>
-    </div>
-    <div class="footer-thanks">
-      <strong>Merci de votre confiance</strong>
+    <div class="footer">
+      <div class="footer-line">
+        Tél: <strong>{{ config('company.phone') }}</strong>
+        &nbsp;&nbsp;·&nbsp;&nbsp;Email: {{ config('company.email') }}
+        &nbsp;&nbsp;·&nbsp;&nbsp;{{ config('company.address_line1') }}, {{ config('company.address_line2') }}
+      </div>
+      <div class="footer-legal">
+        Ninea : {{ config('company.ninea') }} — RC : {{ config('company.rc') }}
+      </div>
     </div>
   </div>
 
