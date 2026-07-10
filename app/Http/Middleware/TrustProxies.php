@@ -10,9 +10,17 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * '*' fait confiance au proxy immédiat (reverse proxy / load balancer de
+     * l'hébergeur) pour les en-têtes X-Forwarded-*. Sans ça, en production
+     * derrière un proxy, Laravel voit la connexion interne (souvent http)
+     * au lieu du schéma réel côté client (https), ce qui fait générer des
+     * liens signés (URL::signedRoute, ex: partage WhatsApp) avec le mauvais
+     * schéma — la signature ne correspond alors plus à l'URL visitée par
+     * le client et Laravel renvoie 403 "Invalid signature".
+     *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.
