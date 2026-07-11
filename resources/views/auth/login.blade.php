@@ -3,6 +3,11 @@
 @section('title', 'Connexion')
 
 @section('content')
+@if(session('warning'))
+  <div class="alert alert-warning d-flex align-items-center" role="alert">
+    <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
+  </div>
+@endif
 <form method="POST" action="{{ route('login') }}">
   @csrf
 

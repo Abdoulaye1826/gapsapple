@@ -4,9 +4,19 @@
    * Partage une facture/un bon d'échange via WhatsApp.
    * Tente d'abord un partage natif du fichier PDF (Web Share API, niveau fichiers)
    * pour joindre réellement le document. Si le navigateur ne le permet pas
-   * (la plupart des navigateurs de bureau), on retombe sur un lien wa.me
-   * pointant directement vers le PDF téléchargeable.
+   * (la plupart des navigateurs de bureau, ou un contexte non sécurisé —
+   * l'API Web Share exige HTTPS), on télécharge automatiquement le PDF en
+   * plus d'ouvrir wa.me, pour que le fichier soit prêt à glisser-déposer
+   * manuellement dans la conversation WhatsApp.
    */
+  function downloadPdf(pdfUrl, fileName) {
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = fileName || 'document.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
   async function shareDocumentViaWhatsApp(button) {
     const payloadUrl = button.dataset.payloadUrl;
     const icon = button.querySelector('i');
@@ -41,6 +51,7 @@
         }
       }
 
+      downloadPdf(data.pdfUrl, data.fileName);
       window.open(data.waUrl, '_blank');
     } catch (error) {
       alert("Erreur lors de la préparation de l'envoi WhatsApp.");

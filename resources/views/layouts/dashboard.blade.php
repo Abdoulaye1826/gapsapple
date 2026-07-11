@@ -44,6 +44,57 @@
             document.getElementById('sidebarOverlay').classList.remove('show');
         });
     </script>
+
+    {{-- ── Gestion de session : garde active tant que l'utilisateur travaille,
+         détecte proprement une expiration réelle et redirige vers la
+         connexion avec un message clair (au lieu d'une page 419 brute). ── --}}
+    <script>
+        (function () {
+            const loginUrl = @json(route('login'));
+            const keepAliveUrl = @json(route('keep-alive'));
+            let expiredHandled = false;
+
+            function showExpiredOverlay() {
+                if (expiredHandled) return;
+                expiredHandled = true;
+
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(26,26,46,0.85);';
+                overlay.innerHTML = `
+                    <div style="background:#fff;border-radius:12px;padding:2rem;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        <i class="bi bi-clock-history" style="font-size:2rem;color:#8a6f1f;"></i>
+                        <p class="mt-3 mb-3 fw-medium">Votre session a expiré. Veuillez vous reconnecter.</p>
+                        <a href="${loginUrl}" class="btn btn-primary w-100">Se reconnecter</a>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                setTimeout(() => { window.location.href = loginUrl; }, 2500);
+            }
+
+            // Intercepteur global : toute requête fetch() de l'application qui
+            // reçoit un 419 (CSRF/session expirée) ou 401 (non authentifié)
+            // déclenche la même détection propre, plutôt que de laisser
+            // chaque appel fetch() individuel échouer silencieusement.
+            const originalFetch = window.fetch;
+            window.fetch = function (...args) {
+                return originalFetch.apply(this, args).then((response) => {
+                    if (response.status === 419 || response.status === 401) {
+                        showExpiredOverlay();
+                    }
+                    return response;
+                });
+            };
+
+            // Keep-alive : tant que l'onglet est visible, un ping léger toutes
+            // les 10 minutes repousse l'expiration de la session côté serveur.
+            setInterval(() => {
+                if (document.visibilityState !== 'visible') return;
+                originalFetch(keepAliveUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .catch(() => {});
+            }, 10 * 60 * 1000);
+        })();
+    </script>
     @stack('scripts')
 </body>
 </html>

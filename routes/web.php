@@ -53,6 +53,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
 
+    // ── Session keep-alive : ping léger appelé périodiquement en JS pour
+    // repousser l'expiration de la session tant que l'utilisateur est actif.
+    Route::get('/keep-alive', fn () => response()->noContent())->name('keep-alive');
+
     // ── Produits & Catégories (Admin, Gestionnaire) ───────────
     Route::middleware('role:admin,manager')->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
